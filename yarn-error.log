@@ -1,0 +1,76 @@
+Arguments: 
+  C:\Program Files\nodejs\node.exe C:\Program Files (x86)\Yarn\bin\yarn.js
+
+PATH: 
+  C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\dotnet\;C:\ProgramData\chocolatey\bin;C:\Program Files\Git\cmd;C:\Program Files (x86)\Yarn\bin\;C:\Program Files\nodejs\;C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\;C:\Users\Utente\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\;C:\Users\Utente\.console-ninja\.bin;C:\Users\Utente\TA-Lib-0.4.28;C:\Users\Utente\AppData\Local\Microsoft\WindowsApps;C:\Users\Utente\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\Utente\AppData\Local\Yarn\bin;C:\Users\Utente\AppData\Roaming\npm;C:\Users\Utente\.dotnet\tools;C:\Users\Utente\miniconda3\condabin;
+
+Yarn version: 
+  1.22.19
+
+Node version: 
+  20.8.0
+
+Platform: 
+  win32 x64
+
+Trace: 
+  SyntaxError: C:\Users\Utente\Source\repos\baluni-api\package.json: Expected double-quoted property name in JSON at position 944
+      at JSON.parse (<anonymous>)
+      at C:\Program Files (x86)\Yarn\lib\cli.js:1629:59
+      at Generator.next (<anonymous>)
+      at step (C:\Program Files (x86)\Yarn\lib\cli.js:310:30)
+      at C:\Program Files (x86)\Yarn\lib\cli.js:321:13
+
+npm manifest: 
+  {
+    "name": "baluni-api",
+    "version": "1.1.5",
+    "description": "Uniswap v3 rebalance and forecast CLI tool",
+    "main": "index.js",
+    "scripts": {
+      "ts-node": "ts-node",
+      "build": "npx tsc",
+      "rebalance": "npx ts-node src/rebalancer.ts",
+      "rebalance-yearn": "npx ts-node src/rebalancerYearn.ts",
+      "invest": "npx ts-node src/investor.ts",
+      "dca": "npx ts-node src/dca.ts",
+      "prediction": "npx ts-node src/prediction.ts",
+      "pumpOrDump": "npx ts-node src/pumpOrDump.ts",
+      "format": "npx prettier --write . --ignore-path .gitignore",
+      "check-types": "tsc --noEmit --incremental"
+    },
+    "keywords": [
+      "defi",
+      "uniswap",
+      "rebalance",
+      "erc20",
+      "cli",
+      "evm"
+    ],
+    "author": "scobru",
+    "license": "AGPL-3.0",
+    "devDependencies": {
+      "@types/express": "^4.17.21",
+      "ts-node": "^10.9.2",
+      "typescript": "^5.3.3"
+    },
+    "dependencies": {
+      "axios": "^1.6.5",
+      "express": "^4.18.3",
+  
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/scobru/baluni.git"
+    },
+    "bugs": {
+      "url": "https://github.com/scobru/baluni/issues"
+    },
+    "homepage": "https://github.com/scobru/baluni#readme"
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
