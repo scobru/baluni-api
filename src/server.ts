@@ -1,6 +1,12 @@
 // server.ts
 import express from "express";
-import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS, TokenConfig } from "./constants";
+import {
+  PROTOCOLS,
+  ORACLE,
+  NATIVETOKENS,
+  NETWORKS,
+  TokenConfig,
+} from "./constants";
 
 const app = express();
 const port = 3000;
@@ -105,7 +111,9 @@ app.get("/:chainId/uni-v3/tokens", async (req, res) => {
     const { chainId } = req.params;
 
     // Filter tokens by chainId if needed, for example, chainId 137 (Polygon)
-    const filteredTokens = data.tokens.filter((token: { chainId: number }) => token.chainId === Number(chainId));
+    const filteredTokens = data.tokens.filter(
+      (token: { chainId: number }) => token.chainId === Number(chainId)
+    );
 
     res.json(filteredTokens);
   } catch (error) {
@@ -117,7 +125,9 @@ app.get("/:chainId/uni-v3/tokens/:tokenSymbol", async (req, res) => {
   const { chainId, tokenSymbol } = req.params;
 
   if (!chainId || !tokenSymbol) {
-    return res.status(400).json({ error: "Missing chainId or tokenName query parameter" });
+    return res
+      .status(400)
+      .json({ error: "Missing chainId or tokenName query parameter" });
   }
 
   try {
@@ -127,7 +137,8 @@ app.get("/:chainId/uni-v3/tokens/:tokenSymbol", async (req, res) => {
     // Filter tokens by chainId and then try to find a token that matches the tokenName
     const matchingTokens = data.tokens.filter(
       (token: { chainId: number; symbol: string }) =>
-        token.chainId === Number(chainId) && token.symbol.toLowerCase() === tokenSymbol.toString().toLowerCase(),
+        token.chainId === Number(chainId) &&
+        token.symbol.toLowerCase() === tokenSymbol.toString().toLowerCase()
     );
 
     if (matchingTokens.length === 0) {
@@ -149,9 +160,13 @@ app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
     const response = await fetch(apiURL);
     const data: YearnVault[] = await response.json();
 
-    let filteredVaults = data.filter(vault => {
-      const matchesSymbol = vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
-      const isVersion3 = vault.version?.startsWith("3.0") || vault.name.includes("3.0") || vault.symbol.includes("3.0");
+    let filteredVaults = data.filter((vault) => {
+      const matchesSymbol =
+        vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
+      const isVersion3 =
+        vault.version?.startsWith("3.0") ||
+        vault.name.includes("3.0") ||
+        vault.symbol.includes("3.0");
       let matchesStrategyType = true;
       let matchesBoosted = true;
 
@@ -166,11 +181,15 @@ app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
         matchesBoosted = vault.boosted === true;
       }
 
-      return matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted;
+      return (
+        matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
+      );
     });
 
     if (filteredVaults.length === 0) {
-      return res.status(404).json({ error: "Vault not found for the given criteria" });
+      return res
+        .status(404)
+        .json({ error: "Vault not found for the given criteria" });
     }
 
     const vault = filteredVaults[0];
@@ -200,9 +219,13 @@ app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
     const response = await fetch(apiURL);
     const data: YearnVault[] = await response.json();
 
-    let filteredVaults = data.filter(vault => {
-      const matchesSymbol = vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
-      const isVersion3 = vault.version?.startsWith("3.0") || vault.name.includes("3.0") || vault.symbol.includes("3.0");
+    let filteredVaults = data.filter((vault) => {
+      const matchesSymbol =
+        vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
+      const isVersion3 =
+        vault.version?.startsWith("3.0") ||
+        vault.name.includes("3.0") ||
+        vault.symbol.includes("3.0");
       let matchesStrategyType = true;
       let matchesBoosted = true;
 
@@ -217,11 +240,15 @@ app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
         matchesBoosted = vault.boosted === true;
       }
 
-      return matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted;
+      return (
+        matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
+      );
     });
 
     if (filteredVaults.length === 0) {
-      return res.status(404).json({ error: "Vault not found for the given criteria" });
+      return res
+        .status(404)
+        .json({ error: "Vault not found for the given criteria" });
     }
 
     const vault = filteredVaults[0];
@@ -254,7 +281,7 @@ app.get("/:chainId/yearn-v3/vaults", async (req, res) => {
 
     // Respond with all matching vaults instead of just the first match
     res.json(
-      data.map(vault => ({
+      data.map((vault) => ({
         vaultAddress: vault.address,
         vaultName: vault.name,
         vaultSymbol: vault.symbol,
@@ -262,7 +289,7 @@ app.get("/:chainId/yearn-v3/vaults", async (req, res) => {
         tokenName: vault.token.name,
         tokenSymbol: vault.token.symbol,
         // Optional: include other properties here if needed
-      })),
+      }))
     );
   } catch (error) {
     console.error("Failed to fetch Yearn Finance vaults:", error);
@@ -270,18 +297,26 @@ app.get("/:chainId/yearn-v3/vaults", async (req, res) => {
   }
 });
 
-app.get("/config/:chainId/:configType/:protocolName/:contractName", (req, res) => {
-  const { chainId, configType, contractName, protocolName } = req.params;
+app.get(
+  "/config/:chainId/:configType/:protocolName/:contractName",
+  (req, res) => {
+    const { chainId, configType, contractName, protocolName } = req.params;
 
-  // Accessing the specific configuration based on chainId, configType, and contractName
-  const config = CONFIGURATIONS[configType]?.[chainId]?.[protocolName]?.[contractName.toUpperCase()];
+    // Accessing the specific configuration based on chainId, configType, and contractName
+    const config =
+      CONFIGURATIONS[configType]?.[chainId]?.[protocolName]?.[
+        contractName.toUpperCase()
+      ];
 
-  if (!config) {
-    return res.status(404).json({ error: "Configuration not found for the given parameters" });
+    if (!config) {
+      return res
+        .status(404)
+        .json({ error: "Configuration not found for the given parameters" });
+    }
+
+    res.json({ chainId, configType, contractName, address: config });
   }
-
-  res.json({ chainId, configType, contractName, address: config });
-});
+);
 
 app.post("/write-config", async (req, res) => {
   const {
@@ -324,7 +359,9 @@ app.post("/write-config", async (req, res) => {
   const updatedYearnVaults: Record<string, string> = {};
 
   const tokenAddresses = await Promise.all(
-    tokens.map((tokenSymbol: string) => fetchTokenAddressByName(tokenSymbol, chainId)),
+    tokens.map((tokenSymbol: string) =>
+      fetchTokenAddressByName(tokenSymbol, chainId)
+    )
   );
 
   tokenAddresses.forEach((address, index) => {
@@ -344,10 +381,13 @@ app.post("/write-config", async (req, res) => {
       const tokenConfig: any = config;
 
       const filteredVaults = yearnVaultsData
-        .filter(vault => {
-          const matchesSymbol = vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
+        .filter((vault) => {
+          const matchesSymbol =
+            vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
           const isVersion3 =
-            vault.version?.startsWith("3.0") || vault.name.includes("3.0") || vault.symbol.includes("3.0");
+            vault.version?.startsWith("3.0") ||
+            vault.name.includes("3.0") ||
+            vault.symbol.includes("3.0");
           let matchesStrategyType = true;
           let matchesBoosted = true;
 
@@ -362,9 +402,11 @@ app.post("/write-config", async (req, res) => {
             matchesBoosted = vault.boosted === true;
           }
 
-          return matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted;
+          return (
+            matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
+          );
         })
-        .map(vault => vault.address);
+        .map((vault) => vault.address);
 
       if (filteredVaults.length > 0) {
         updatedYearnVaults[tokenSymbol] = filteredVaults[0];
@@ -377,7 +419,7 @@ app.post("/write-config", async (req, res) => {
     TOKENS: tokenAddresses, // Indirizzi dei token
     WEIGHTS_UP: updatedWeightsUp, // Pesi aggiornati per l'aumento di prezzo
     WEIGHTS_DOWN: updatedWeightsDown, // Pesi aggiornati per il calo di prezzo
-    USDC: await fetchTokenAddressByName("USDC", chainId),
+    USDC: await fetchTokenAddressByName("USDC.E", chainId),
     NATIVE: NATIVETOKENS[chainId]?.NATIVE,
     WRAPPED: NATIVETOKENS[chainId]?.WRAPPED,
     ORACLE: ORACLE[chainId]?.["1inch-spot-agg"]?.OFFCHAINORACLE,
@@ -430,7 +472,10 @@ async function fetchYearnVaultsData(chainId: number): Promise<YearnVault[]> {
   }
 }
 
-async function fetchTokenAddressByName(tokenSymbol: string, chainId: number): Promise<string | null> {
+async function fetchTokenAddressByName(
+  tokenSymbol: string,
+  chainId: number
+): Promise<string | null> {
   try {
     const response = await fetch(TOKENS_URL);
     const data = await response.json();
@@ -438,7 +483,8 @@ async function fetchTokenAddressByName(tokenSymbol: string, chainId: number): Pr
     // Filtra i token per chainId e cerca un token che corrisponda al tokenSymbol fornito
     const matchingToken = data.tokens.find(
       (token: { chainId: number; symbol: string }) =>
-        token.chainId === chainId && token.symbol.toLowerCase() === tokenSymbol.toLowerCase(),
+        token.chainId === chainId &&
+        token.symbol.toLowerCase() === tokenSymbol.toLowerCase()
     );
 
     // Se il token esiste, restituisci il suo indirizzo
