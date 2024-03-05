@@ -14,45 +14,45 @@ export async function swap(
   address: string,
   token0: string,
   token1: string,
-  amount: number,
   reverse: string,
   protocol: string,
-  chainId: number
+  chainId: number,
+  amount: number
 ) {
   const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
   const wallet = new Wallet(process.env.PRIVATE_KEY as string, provider);
 
   const tokenAAddress = reverse == "true" ? token1 : token0;
   const tokenBAddress = reverse == "true" ? token0 : token1;
+
   const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
   const tokenBContract = new Contract(tokenBAddress, erc20Abi, wallet);
-  const swapRouterAddress = PROTOCOLS[chainId][protocol].ROUTER as string; // polygon
 
   const swapRouterContract = new Contract(
-    swapRouterAddress,
+    PROTOCOLS[chainId][protocol].ROUTER as string,
     swapRouterAbi,
     wallet
   );
 
-  const providerGasPrice = await provider.getFeeData();
-  const gasPrice: any = providerGasPrice?.gasPrice;
   const balance = await tokenAContract.balanceOf(address);
 
-  const calldataTransferFrom = tokenAContract.interface.encodeFunctionData(
-    "transferFrom",
-    [address, router, balance]
-  );
+  const calldataTransferFromSenderToRouter =
+    tokenAContract.interface.encodeFunctionData("transferFrom", [
+      address,
+      router,
+      balance,
+    ]);
 
-  const transferFromTx = {
+  const transferFromSenderToRouter = {
     to: tokenAAddress,
     value: 0,
-    data: calldataTransferFrom,
+    data: calldataTransferFromSenderToRouter,
   };
 
   const calldataApproveRouterToUni =
     tokenAContract.interface.encodeFunctionData("approve", [
-      swapRouterAddress,
-      ethers.constants.MaxUint256,
+      PROTOCOLS[chainId][protocol].ROUTER as string,
+      balance,
     ]);
 
   const approvalRouterToUni = {
@@ -61,32 +61,31 @@ export async function swap(
     data: calldataApproveRouterToUni,
   };
 
-  const calldataApproveRouter = tokenAContract.interface.encodeFunctionData(
-    "approve",
-    [router, ethers.constants.MaxUint256]
-  );
+  const calldataApproveSenderToRouter =
+    tokenAContract.interface.encodeFunctionData("approve", [router, balance]);
 
-  const approvalToRouter = {
+  const approvalSenderToRouter = {
     to: tokenAAddress,
     value: 0,
-    data: calldataApproveRouter,
+    data: calldataApproveSenderToRouter,
   };
 
-  const calldataApproveUni = tokenAContract.interface.encodeFunctionData(
-    "approve",
-    [swapRouterContract, ethers.constants.MaxUint256]
-  );
+  const calldataApproveSenderToUni =
+    tokenAContract.interface.encodeFunctionData("approve", [
+      swapRouterContract,
+      balance,
+    ]);
 
-  const approvalToUni = {
+  const approvalSenderToUni = {
     to: tokenAAddress,
     value: 0,
-    data: calldataApproveUni,
+    data: calldataApproveSenderToUni,
   };
 
   const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
   const quoterAddress = PROTOCOLS[chainId][protocol].QUOTER as string;
   const quoterContract = new Contract(quoterAddress, quoterAbi, wallet);
-  const slippageTolerance = 50;
+  const slippageTolerance = 100;
 
   let adjAmount;
 
@@ -119,29 +118,26 @@ export async function swap(
     address,
     swapDeadline,
     adjAmount,
-    minimumAmountB, // BigNumber.from(0),
+    minimumAmountB,
     0,
   ];
 
-  const calldataSwap = swapRouterContract.interface.encodeFunctionData(
-    "exactInputSingle",
-    [swapTxInputs]
-  );
+  const calldataSwapRouterToUni =
+    swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
+      swapTxInputs,
+    ]);
 
-  const swapTx = {
-    to: swapRouterAddress,
+  const swapRouterToUni = {
+    to: PROTOCOLS[chainId][protocol].ROUTER as string,
     value: 0,
-    data: calldataSwap,
+    data: calldataSwapRouterToUni,
   };
 
-  // create a batch of transactions
-  const txs = {
-    approvalToRouter,
-    approvalToUni,
-    transferFromTx,
+  return {
+    approvalSenderToRouter,
+    approvalSenderToUni,
+    transferFromSenderToRouter,
     approvalRouterToUni,
-    swapTx,
+    swapRouterToUni,
   };
-
-  return txs;
 }

@@ -51,7 +51,10 @@ export const NATIVETOKENS: TokenConfig = {
 };
 
 export const NETWORKS: NetworkConfig = {
-  "137": "https://polygon-mainnet.g.alchemy.com/v2/u1t0bPCxL7FksVGLrMLW950RqujroHhP",
+  "137":
+    "https://polygon-mainnet.g.alchemy.com/v2/nPBTC9lNonD1KsZGmuXSRGfVh6O63x2_",
 };
 
-export type ConfigType = { [chainId: string]: { [contractName: string]: string } };
+export type ConfigType = {
+  [chainId: string]: { [contractName: string]: string };
+};

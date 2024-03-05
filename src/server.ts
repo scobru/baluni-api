@@ -10,7 +10,7 @@ import {
 import { swap } from "./swap";
 
 const app = express();
-const port = 3002;
+const port = 3001;
 
 interface YearnVault {
   address: string;
@@ -469,37 +469,54 @@ app.post(
         address: any;
         token0: any;
         token1: any;
-        amount: any;
         reverse: any;
         protocol: any;
         chainId: any;
+        amount: any;
       };
     },
     res: {
       json: (arg0: {
-        transferFromTx: { to: string; data: string; value: any } | undefined;
+        approvalSenderToRouter:
+          | { to: string; data: string; value: any }
+          | undefined;
+
+        approvalSenderToUni:
+          | { to: string; data: string; value: any }
+          | undefined;
+
+        transferFromSenderToRouter:
+          | { to: string; data: string; value: any }
+          | undefined;
+
         approvalRouterToUni:
           | { to: string; data: string; value: any }
           | undefined;
-        approvalToRouter: { to: string; data: string; value: any } | undefined;
-        approvalToUni: { to: string; data: string; value: any } | undefined;
-        swapTx: { to: string; data: string; value: any };
+
+        swapRouterToUni: { to: string; data: string; value: any } | undefined;
       }) => void;
     }
   ) => {
-    const { address, token0, token1, amount, reverse, protocol, chainId } =
+    const { address, token0, token1, reverse, protocol, chainId, amount } =
       req.params;
+
+    console.log("Execute Swap Calldata Build...");
+    console.log(req.params);
+
     const result = await swap(
       address,
       token0,
       token1,
-      amount,
       reverse,
       protocol,
-      chainId
+      chainId,
+      amount
     );
+
     console.log(result);
-    res.json(result!);
+    res.json({ data: "OK" } as any);
+
+    //res.json(result!);
   }
 );
 
