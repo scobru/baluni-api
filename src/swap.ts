@@ -20,7 +20,7 @@ export async function swap(
   amount: number
 ) {
   const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
-  const wallet = new Wallet(process.env.PRIVATE_KEY as string, provider);
+  const wallet = new Wallet(String(process.env.PRIVATE_KEY), provider);
 
   const tokenAAddress = reverse == "true" ? token1 : token0;
   const tokenBAddress = reverse == "true" ? token0 : token1;
@@ -29,16 +29,37 @@ export async function swap(
   const tokenBContract = new Contract(tokenBAddress, erc20Abi, wallet);
 
   const swapRouterContract = new Contract(
-    PROTOCOLS[chainId][protocol].ROUTER as string,
+    String(PROTOCOLS[chainId][protocol].ROUTER),
     swapRouterAbi,
     wallet
   );
 
-  const balance = await tokenAContract.balanceOf(address);
+  const balance = await tokenAContract.balanceOf(address!);
+
+  const calldataApproveSenderToUni =
+    tokenAContract.interface.encodeFunctionData("approve", [
+      String(PROTOCOLS[chainId][protocol].ROUTER),
+      balance,
+    ]);
+
+  const approvalSenderToUni = {
+    to: tokenAAddress,
+    value: 0,
+    data: calldataApproveSenderToUni,
+  };
+
+  const calldataApproveSenderToRouter =
+    tokenAContract.interface.encodeFunctionData("approve", [router, balance]);
+
+  const approvalSenderToRouter = {
+    to: tokenAAddress,
+    value: 0,
+    data: calldataApproveSenderToRouter,
+  };
 
   const calldataTransferFromSenderToRouter =
     tokenAContract.interface.encodeFunctionData("transferFrom", [
-      address,
+      address!,
       router,
       balance,
     ]);
@@ -59,27 +80,6 @@ export async function swap(
     to: tokenAAddress,
     value: 0,
     data: calldataApproveRouterToUni,
-  };
-
-  const calldataApproveSenderToRouter =
-    tokenAContract.interface.encodeFunctionData("approve", [router, balance]);
-
-  const approvalSenderToRouter = {
-    to: tokenAAddress,
-    value: 0,
-    data: calldataApproveSenderToRouter,
-  };
-
-  const calldataApproveSenderToUni =
-    tokenAContract.interface.encodeFunctionData("approve", [
-      swapRouterContract,
-      balance,
-    ]);
-
-  const approvalSenderToUni = {
-    to: tokenAAddress,
-    value: 0,
-    data: calldataApproveSenderToUni,
   };
 
   const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
@@ -115,7 +115,7 @@ export async function swap(
     tokenAAddress,
     tokenBAddress,
     3000,
-    address,
+    address!,
     swapDeadline,
     adjAmount,
     minimumAmountB,

@@ -503,20 +503,26 @@ app.post(
     console.log("Execute Swap Calldata Build...");
     console.log(req.params);
 
+    const token0Address = (await fetchTokenAddressByName(
+      token0,
+      chainId
+    )) as string;
+    const token1Address = (await fetchTokenAddressByName(
+      token1,
+      chainId
+    )) as string;
+
     const result = await swap(
       address,
-      token0,
-      token1,
+      token0Address,
+      token1Address,
       reverse,
       protocol,
       chainId,
       amount
     );
 
-    console.log(result);
-    res.json({ data: "OK" } as any);
-
-    //res.json(result!);
+    res.json(result!);
   }
 );
 
