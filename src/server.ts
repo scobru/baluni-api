@@ -7,6 +7,7 @@ import {
   NETWORKS,
   TokenConfig,
 } from "./constants";
+
 import { swap } from "./uni-v3/swap-tokens";
 
 const app = express();
@@ -477,23 +478,28 @@ app.post(
     },
     res: {
       json: (arg0: {
-        approvalSenderToRouter:
-          | { to: string; data: string; value: any }
-          | undefined;
+        SENDER: {
+          approvalSenderToBatcher:
+            | { to: string; data: string; value: any }
+            | undefined;
 
-        approvalSenderToUni:
-          | { to: string; data: string; value: any }
-          | undefined;
+          approvalSenderToUniRouter:
+            | { to: string; data: string; value: any }
+            | undefined;
+        };
+        BATCHER: {
+          transferFromSenderToBatcher:
+            | { to: string; data: string; value: any }
+            | undefined;
 
-        transferFromSenderToRouter:
-          | { to: string; data: string; value: any }
-          | undefined;
+          approvalBatcherToUniRouter:
+            | { to: string; data: string; value: any }
+            | undefined;
 
-        approvalRouterToUni:
-          | { to: string; data: string; value: any }
-          | undefined;
-
-        swapRouterToUni: { to: string; data: string; value: any } | undefined;
+          swapBatcherToUniRouter:
+            | { to: string; data: string; value: any }
+            | undefined;
+        };
       }) => void;
     }
   ) => {
@@ -503,19 +509,19 @@ app.post(
     console.log("Execute Swap Calldata Build...");
     console.log(req.params);
 
-    const token0Address = (await fetchTokenAddressByName(
-      token0,
-      chainId
+    const TokenAAddress = (await fetchTokenAddressByName(
+      String(token0),
+      Number(chainId)
     )) as string;
-    const token1Address = (await fetchTokenAddressByName(
-      token1,
-      chainId
+    const TokenBAddress = (await fetchTokenAddressByName(
+      String(token1),
+      Number(chainId)
     )) as string;
 
     const result = await swap(
       address,
-      token0Address,
-      token1Address,
+      TokenAAddress!,
+      TokenBAddress!,
       reverse,
       protocol,
       chainId,

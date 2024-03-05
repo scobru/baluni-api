@@ -2,13 +2,11 @@ import { Contract, Wallet, ethers } from "ethers";
 import erc20Abi from "../../abis/ERC20.json";
 import swapRouterAbi from "../../abis/SwapRouter.json";
 import quoterAbi from "../../abis/Quoter.json";
-import { PROTOCOLS, NETWORKS } from "../constants";
+import { PROTOCOLS, NETWORKS, INFRA } from "../constants";
 import { BigNumber } from "bignumber.js";
 import env from "dotenv";
 
 env.config();
-
-const router = "0xA7d0bdC6235a745d283aCF6b036b54E77AFFCAd5";
 
 export async function swap(
   address: string,
@@ -19,6 +17,10 @@ export async function swap(
   chainId: number,
   amount: number
 ) {
+  console.log(address, token0, token1, reverse, protocol, chainId, amount);
+
+  const batcher = INFRA[chainId].BATCHER;
+
   const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
   const wallet = new Wallet(String(process.env.PRIVATE_KEY), provider);
 
@@ -36,50 +38,50 @@ export async function swap(
 
   const balance = await tokenAContract.balanceOf(address!);
 
-  const calldataApproveSenderToUni =
+  const calldataApprovalSenderToUniRouter =
     tokenAContract.interface.encodeFunctionData("approve", [
       String(PROTOCOLS[chainId][protocol].ROUTER),
       balance,
     ]);
 
-  const approvalSenderToUni = {
+  const approvalSenderToUniRouter = {
     to: tokenAAddress,
     value: 0,
-    data: calldataApproveSenderToUni,
+    data: calldataApprovalSenderToUniRouter,
   };
 
-  const calldataApproveSenderToRouter =
-    tokenAContract.interface.encodeFunctionData("approve", [router, balance]);
+  const calldataApprovalSenderToBatcher =
+    tokenAContract.interface.encodeFunctionData("approve", [batcher, balance]);
 
-  const approvalSenderToRouter = {
+  const approvalSenderToBatcher = {
     to: tokenAAddress,
     value: 0,
-    data: calldataApproveSenderToRouter,
+    data: calldataApprovalSenderToBatcher,
   };
 
-  const calldataTransferFromSenderToRouter =
+  const calldataTransferFromSenderToBatcher =
     tokenAContract.interface.encodeFunctionData("transferFrom", [
       address!,
-      router,
+      batcher,
       balance,
     ]);
 
-  const transferFromSenderToRouter = {
+  const transferFromSenderToBatcher = {
     to: tokenAAddress,
     value: 0,
-    data: calldataTransferFromSenderToRouter,
+    data: calldataTransferFromSenderToBatcher,
   };
 
-  const calldataApproveRouterToUni =
+  const calldataApproveBatcherToUniRouter =
     tokenAContract.interface.encodeFunctionData("approve", [
       PROTOCOLS[chainId][protocol].ROUTER as string,
       balance,
     ]);
 
-  const approvalRouterToUni = {
+  const approvalBatcherToUniRouter = {
     to: tokenAAddress,
     value: 0,
-    data: calldataApproveRouterToUni,
+    data: calldataApproveBatcherToUniRouter,
   };
 
   const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
@@ -108,8 +110,9 @@ export async function swap(
       0
     );
 
-  const minimumAmountB =
-    (Number(expectedAmountB) * (10000 - slippageTolerance)) / 10000;
+  const minimumAmountB: string = String(
+    (Number(expectedAmountB) * (10000 - slippageTolerance)) / 10000
+  );
 
   const swapTxInputs = [
     tokenAAddress,
@@ -122,22 +125,26 @@ export async function swap(
     0,
   ];
 
-  const calldataSwapRouterToUni =
+  const calldataSwapBatcherToUniRouter =
     swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
       swapTxInputs,
     ]);
 
-  const swapRouterToUni = {
+  const swapBatcherToUniRouter = {
     to: PROTOCOLS[chainId][protocol].ROUTER as string,
     value: 0,
-    data: calldataSwapRouterToUni,
+    data: calldataSwapBatcherToUniRouter,
   };
 
   return {
-    approvalSenderToRouter,
-    approvalSenderToUni,
-    transferFromSenderToRouter,
-    approvalRouterToUni,
-    swapRouterToUni,
+    SENDER: {
+      approvalSenderToBatcher,
+      approvalSenderToUniRouter,
+    },
+    BATCHER: {
+      transferFromSenderToBatcher,
+      approvalBatcherToUniRouter,
+      swapBatcherToUniRouter,
+    },
   };
 }
