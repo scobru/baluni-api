@@ -1,8 +1,8 @@
 import { Contract, Wallet, ethers } from "ethers";
-import erc20Abi from "../abis/ERC20.json";
-import swapRouterAbi from "../abis/SwapRouter.json";
-import quoterAbi from "../abis/Quoter.json";
-import { PROTOCOLS, NETWORKS } from "./constants";
+import erc20Abi from "../../abis/ERC20.json";
+import swapRouterAbi from "../../abis/SwapRouter.json";
+import quoterAbi from "../../abis/Quoter.json";
+import { PROTOCOLS, NETWORKS } from "../constants";
 import { BigNumber } from "bignumber.js";
 import env from "dotenv";
 
