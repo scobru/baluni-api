@@ -7,9 +7,10 @@ import {
   NETWORKS,
   TokenConfig,
 } from "./constants";
+import { swap } from "./swap";
 
 const app = express();
-const port = 3001;
+const port = 3002;
 
 interface YearnVault {
   address: string;
@@ -381,7 +382,7 @@ app.post("/write-config", async (req, res) => {
       const tokenConfig: any = config;
 
       const filteredVaults = yearnVaultsData
-        .filter((vault) => {
+        .filter((vault: YearnVault) => {
           const matchesSymbol =
             vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
           const isVersion3 =
@@ -406,7 +407,7 @@ app.post("/write-config", async (req, res) => {
             matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
           );
         })
-        .map((vault) => vault.address);
+        .map((vault: YearnVault) => vault.address);
 
       if (filteredVaults.length > 0) {
         updatedYearnVaults[tokenSymbol] = filteredVaults[0];
@@ -459,6 +460,48 @@ app.post("/write-config", async (req, res) => {
     SELECTED_CHAINID: chainId,
   });
 });
+
+app.post(
+  "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount",
+  async (
+    req: {
+      params: {
+        address: any;
+        token0: any;
+        token1: any;
+        amount: any;
+        reverse: any;
+        protocol: any;
+        chainId: any;
+      };
+    },
+    res: {
+      json: (arg0: {
+        transferFromTx: { to: string; data: string; value: any } | undefined;
+        approvalRouterToUni:
+          | { to: string; data: string; value: any }
+          | undefined;
+        approvalToRouter: { to: string; data: string; value: any } | undefined;
+        approvalToUni: { to: string; data: string; value: any } | undefined;
+        swapTx: { to: string; data: string; value: any };
+      }) => void;
+    }
+  ) => {
+    const { address, token0, token1, amount, reverse, protocol, chainId } =
+      req.params;
+    const result = await swap(
+      address,
+      token0,
+      token1,
+      amount,
+      reverse,
+      protocol,
+      chainId
+    );
+    console.log(result);
+    res.json(result!);
+  }
+);
 
 async function fetchYearnVaultsData(chainId: number): Promise<YearnVault[]> {
   try {
