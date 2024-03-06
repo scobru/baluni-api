@@ -1,5 +1,6 @@
-import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants"; // Assuming your config is in a file named config.ts in the same directory
-import { swap, batchSwap } from "./uni-v3/swap-tokens"; // Adjust the import path based on your file structure
+import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
+import { swap, batchSwap } from "./uni-v3/swap-tokens";
+
 export function swapUniV3(
   address: string,
   token0: string,
@@ -75,4 +76,4 @@ export function getNetworkRPC(chainId: string): string | undefined {
   return NETWORKS[chainId];
 }
 
-export * from "./constants";
+export { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";

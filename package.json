@@ -1,10 +1,12 @@
 {
   "name": "baluni-api",
-  "version": "1.2.3",
+  "version": "1.2.6",
   "description": "Api for baluni-cli",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "commonjs",
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "ts-node": "ts-node",
     "build": "npx tsc",
