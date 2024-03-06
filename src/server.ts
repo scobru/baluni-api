@@ -106,6 +106,7 @@ const TOKENS_URL = "https://gateway.ipfs.io/ipns/tokens.uniswap.org";
 
 app.use(express.json());
 
+// Example: GET /1/uni-v3/tokens
 app.get("/:chainId/uni-v3/tokens", async (req, res) => {
   try {
     const response = await fetch(TOKENS_URL);
@@ -123,6 +124,7 @@ app.get("/:chainId/uni-v3/tokens", async (req, res) => {
   }
 });
 
+// Example: GET /1/uni-v3/tokens/USDC
 app.get("/:chainId/uni-v3/tokens/:tokenSymbol", async (req, res) => {
   const { chainId, tokenSymbol } = req.params;
 
@@ -153,6 +155,7 @@ app.get("/:chainId/uni-v3/tokens/:tokenSymbol", async (req, res) => {
   }
 });
 
+// Example: GET /1/yearn-v3/vaults/USDC
 app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
   const { tokenSymbol, chainId } = req.params;
   const { strategyType, boosted } = req.query; // "multi" for Multi Strategy, "single" for Single Strategy, and "boosted" for filtering boosted vaults
@@ -212,65 +215,7 @@ app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
   }
 });
 
-app.get("/:chainId/yearn-v3/vaults/:tokenSymbol", async (req, res) => {
-  const { tokenSymbol, chainId } = req.params;
-  const { strategyType, boosted } = req.query; // "multi" for Multi Strategy, "single" for Single Strategy, and "boosted" for filtering boosted vaults
-  const apiURL = `https://ydaemon.yearn.fi/${chainId}/vaults/all`;
-
-  try {
-    const response = await fetch(apiURL);
-    const data: YearnVault[] = await response.json();
-
-    let filteredVaults = data.filter((vault) => {
-      const matchesSymbol =
-        vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
-      const isVersion3 =
-        vault.version?.startsWith("3.0") ||
-        vault.name.includes("3.0") ||
-        vault.symbol.includes("3.0");
-      let matchesStrategyType = true;
-      let matchesBoosted = true;
-
-      if (strategyType === "multi") {
-        matchesStrategyType = vault.kind === "Multi Strategy";
-      } else if (strategyType === "single") {
-        matchesStrategyType = vault.kind !== "Multi Strategy";
-      }
-
-      // Check if boosted filter is applied
-      if (boosted === "true") {
-        matchesBoosted = vault.boosted === true;
-      }
-
-      return (
-        matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
-      );
-    });
-
-    if (filteredVaults.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "Vault not found for the given criteria" });
-    }
-
-    const vault = filteredVaults[0];
-    res.json({
-      vaultAddress: vault.address,
-      vaultName: vault.name,
-      vaultSymbol: vault.symbol,
-      tokenAddress: vault.token.address,
-      tokenName: vault.token.name,
-      tokenSymbol: vault.token.symbol,
-      strategyType: vault.kind,
-      version: vault.version,
-      boosted: vault.boosted, // Include boosted status in the response
-    });
-  } catch (error) {
-    console.error("Failed to fetch Yearn Finance vaults:", error);
-    res.status(500).json({ error: "Failed to fetch Yearn Finance vaults" });
-  }
-});
-
+// Example: GET /1/yearn-v3/vaults/
 app.get("/:chainId/yearn-v3/vaults", async (req, res) => {
   const { chainId } = req.params;
   const apiURL = `https://ydaemon.yearn.fi/${chainId}/vaults/all`;
@@ -299,6 +244,7 @@ app.get("/:chainId/yearn-v3/vaults", async (req, res) => {
   }
 });
 
+// Example: GET /config/1/protocols/uni-v3/ROUTER
 app.get(
   "/config/:chainId/:configType/:protocolName/:contractName",
   (req, res) => {
@@ -320,6 +266,7 @@ app.get(
   }
 );
 
+// Example: POST /write-config
 app.post("/write-config", async (req, res) => {
   const {
     tokens,
@@ -462,6 +409,7 @@ app.post("/write-config", async (req, res) => {
   });
 });
 
+// Example: POST /swap/0x1234.../USDC/ETH/false/uni-v3/1/100
 app.post(
   "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount",
   async (req, res) => {
@@ -494,6 +442,7 @@ app.post(
       res.json({
         Approvals: swapResult.Approvals,
         Calldatas: swapResult.Calldatas,
+        TokensReturn: swapResult.TokensReturn,
       });
     } catch (error) {
       console.error("Error during swap operation:", error);
@@ -502,6 +451,9 @@ app.post(
   }
 );
 
+// HELPER FUNCTIONS
+
+// Fetch Yearn Finance vaults data
 async function fetchYearnVaultsData(chainId: number): Promise<YearnVault[]> {
   try {
     const apiURL = `https://ydaemon.yearn.fi/${chainId}/vaults/all`;
@@ -514,6 +466,7 @@ async function fetchYearnVaultsData(chainId: number): Promise<YearnVault[]> {
   }
 }
 
+// Fetch token address by name from the Uniswap token list
 async function fetchTokenAddressByName(
   tokenSymbol: string,
   chainId: number

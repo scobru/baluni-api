@@ -25,6 +25,7 @@ type GeneralCOnfig = {
 export const INFRA: InfraConfig = {
   "137": {
     BATCHER: "0xA7d0bdC6235a745d283aCF6b036b54E77AFFCAd5",
+    ROUTER: "0x19F330eBa98FFd47A01F8f2afB0b9863a24497dD",
   },
 };
 
@@ -55,7 +56,10 @@ export const NATIVETOKENS: TokenConfig = {
 };
 
 export const NETWORKS: NetworkConfig = {
-  "137": "https://polygon-mainnet.g.alchemy.com/v2/u1t0bPCxL7FksVGLrMLW950RqujroHhP",
+  "137":
+    "https://polygon-mainnet.g.alchemy.com/v2/u1t0bPCxL7FksVGLrMLW950RqujroHhP",
 };
 
-export type ConfigType = { [chainId: string]: { [contractName: string]: string } };
+export type ConfigType = {
+  [chainId: string]: { [contractName: string]: string };
+};
