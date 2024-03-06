@@ -464,71 +464,41 @@ app.post("/write-config", async (req, res) => {
 
 app.post(
   "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount",
-  async (
-    req: {
-      params: {
-        address: any;
-        token0: any;
-        token1: any;
-        reverse: any;
-        protocol: any;
-        chainId: any;
-        amount: any;
-      };
-    },
-    res: {
-      json: (arg0: {
-        SENDER: {
-          approvalSenderToBatcher:
-            | { to: string; data: string; value: any }
-            | undefined;
-
-          approvalSenderToUniRouter:
-            | { to: string; data: string; value: any }
-            | undefined;
-        };
-        BATCHER: {
-          transferFromSenderToBatcher:
-            | { to: string; data: string; value: any }
-            | undefined;
-
-          approvalBatcherToUniRouter:
-            | { to: string; data: string; value: any }
-            | undefined;
-
-          swapBatcherToUniRouter:
-            | { to: string; data: string; value: any }
-            | undefined;
-        };
-      }) => void;
-    }
-  ) => {
+  async (req, res) => {
     const { address, token0, token1, reverse, protocol, chainId, amount } =
       req.params;
 
-    console.log("Execute Swap Calldata Build...");
-    console.log(req.params);
+    try {
+      const tokenAAddress = await fetchTokenAddressByName(
+        token0,
+        Number(chainId)
+      );
+      const tokenBAddress = await fetchTokenAddressByName(
+        token1,
+        Number(chainId)
+      );
 
-    const TokenAAddress = (await fetchTokenAddressByName(
-      String(token0),
-      Number(chainId)
-    )) as string;
-    const TokenBAddress = (await fetchTokenAddressByName(
-      String(token1),
-      Number(chainId)
-    )) as string;
+      const swapResult = await swap(
+        address,
+        String(tokenAAddress)!,
+        String(tokenBAddress)!,
+        reverse,
+        protocol,
+        parseInt(chainId),
+        parseFloat(amount)
+      );
 
-    const result = await swap(
-      address,
-      TokenAAddress!,
-      TokenBAddress!,
-      reverse,
-      protocol,
-      chainId,
-      amount
-    );
+      // Prepare and send the response using the structure from the swap function output
+      console.log("Swap result:", swapResult);
 
-    res.json(result!);
+      res.json({
+        Approvals: swapResult.Approvals,
+        Calldatas: swapResult.Calldatas,
+      });
+    } catch (error) {
+      console.error("Error during swap operation:", error);
+      res.status(500).json({ error: "Error during swap operation" });
+    }
   }
 );
 

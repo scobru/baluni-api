@@ -26,6 +26,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@uniswap/permit2-sdk": "^1.2.0",
     "axios": "^1.6.5",
     "bignumber.js": "^9.1.2",
     "dotenv": "^16.4.5",
