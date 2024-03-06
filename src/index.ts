@@ -1,7 +1,6 @@
 import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants"; // Assuming your config is in a file named config.ts in the same directory
 import { swap, batchSwap } from "./uni-v3/swap-tokens"; // Adjust the import path based on your file structure
-
-function swapUniV3(
+export function swapUniV3(
   address: string,
   token0: string,
   token1: string,
@@ -13,7 +12,7 @@ function swapUniV3(
   return swap(address, token0, token1, reverse, protocol, chainId, amount);
 }
 
-function batchSwapUniV3([...args]: [
+export function batchSwapUniV3([...args]: [
   string,
   string,
   string,
@@ -38,7 +37,7 @@ function batchSwapUniV3([...args]: [
 }
 
 // Example function that uses the INFRA config
-function getInfraAddress(
+export function getInfraAddress(
   chainId: string,
   contractName: string
 ): string | undefined {
@@ -46,7 +45,7 @@ function getInfraAddress(
 }
 
 // Example function that uses the PROTOCOLS config
-function getProtocolAddress(
+export function getProtocolAddress(
   chainId: string,
   protocolName: string,
   contractName: string
@@ -55,7 +54,7 @@ function getProtocolAddress(
 }
 
 // Example function that uses the ORACLE config
-function getOracleAddress(
+export function getOracleAddress(
   chainId: string,
   protocolName: string,
   contractName: string
@@ -64,7 +63,7 @@ function getOracleAddress(
 }
 
 // Example function that uses the NATIVETOKENS config
-function getNativeTokenAddress(
+export function getNativeTokenAddress(
   chainId: string,
   tokenName: string
 ): string | undefined {
@@ -72,6 +71,8 @@ function getNativeTokenAddress(
 }
 
 // Example function that uses the NETWORKS config
-function getNetworkRPC(chainId: string): string | undefined {
+export function getNetworkRPC(chainId: string): string | undefined {
   return NETWORKS[chainId];
 }
+
+export * from "./constants";

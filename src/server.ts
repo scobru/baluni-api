@@ -1,12 +1,6 @@
 // server.ts
 import express from "express";
-import {
-  PROTOCOLS,
-  ORACLE,
-  NATIVETOKENS,
-  NETWORKS,
-  TokenConfig,
-} from "./constants";
+import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 
 import { swap } from "./uni-v3/swap-tokens";
 
@@ -102,7 +96,7 @@ const CONFIGURATIONS: Configurations = {
   networks: NETWORKS,
 };
 
-const TOKENS_URL = "https://gateway.ipfs.io/ipns/tokens.uniswap.org";
+const TOKENS_URL = "https://tokens.uniswap.org";
 
 app.use(express.json());
 

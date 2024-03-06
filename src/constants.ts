@@ -1,26 +1,11 @@
-export type TokenConfig = {
-  [chainId: string]: {
-    [tokenName: string]: string;
-  };
-};
+import {
+  InfraConfig,
+  GeneralCOnfig,
+  TokenConfig,
+  NetworkConfig,
+} from "./types/constants";
 
-export type InfraConfig = {
-  [chainId: string]: {
-    [contractName: string]: string;
-  };
-};
-
-type NetworkConfig = {
-  [chainId: string]: string;
-};
-
-type GeneralCOnfig = {
-  [chainId: string]: {
-    [protocolName: string]: {
-      [contractName: string]: string;
-    };
-  };
-};
+export const BASEURL = "https://baluni-api.scobrudot.dev";
 
 export const INFRA: InfraConfig = {
   "137": {
@@ -58,8 +43,4 @@ export const NATIVETOKENS: TokenConfig = {
 export const NETWORKS: NetworkConfig = {
   "137":
     "https://polygon-mainnet.g.alchemy.com/v2/u1t0bPCxL7FksVGLrMLW950RqujroHhP",
-};
-
-export type ConfigType = {
-  [chainId: string]: { [contractName: string]: string };
 };
