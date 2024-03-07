@@ -37,57 +37,6 @@ interface Configurations {
   [key: string]: any; // Use a more specific type if possible for your configurations
 }
 
-interface YearnVaultConfig {
-  [tokenSymbol: string]: {
-    strategy: string;
-    boosted: boolean;
-  };
-}
-
-interface ConfigResponse {
-  TOKENS: string[];
-  WEIGHTS_UP: Record<string, number>;
-  WEIGHTS_DOWN: Record<string, number>;
-  USDC: string;
-  NATIVE: string;
-  WRAPPED: string;
-  WETH: string;
-  ORACLE: string;
-  ROUTER: string;
-  QUOTER: string;
-  FACTORY: string;
-  NETWORKS: string;
-  YEARN_ENABLED: boolean;
-  YEARN_VAULTS: Record<string, string>;
-  LIMIT: number;
-  SLIPPAGE: number;
-  INTERVAL: number;
-  MAX_APPROVAL: boolean;
-  INVESTMENT_INTERVAL: number;
-  INVESTMENT_AMOUNT: number;
-  TREND_FOLLOWING: boolean;
-  KST_TIMEFRAME: string;
-  PREDICTION: boolean;
-  PREDICTION_PERIOD: number;
-  PREDICTION_EPOCHS: number;
-  PREDICTION_SYMBOL: string;
-  PREDICTION_ALGO: string;
-  TECNICAL_ANALYSIS: boolean;
-  RSI_PERIOD: number;
-  RSI_OVERBOUGHT: number;
-  RSI_OVERSOLD: number;
-  RSI_TIMEFRAME: string;
-  STOCKRSI_PERIOD: number;
-  STOCKRSI_OVERBOUGHT: number;
-  STOCKRSI_OVERSOLD: number;
-  EMA_TIMEFRAME: string;
-  EMA_PERIOD: number;
-  EMA_SYMBOL: string;
-  EMA_FAST: number;
-  EMA_SLOW: number;
-  VWAP_PERIOD: number;
-}
-
 // Unified configuration object
 const CONFIGURATIONS: Configurations = {
   protocols: PROTOCOLS,
@@ -99,6 +48,10 @@ const CONFIGURATIONS: Configurations = {
 const TOKENS_URL = "https://tokens.uniswap.org";
 
 app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
 
 // Example: GET /1/uni-v3/tokens
 app.get("/:chainId/uni-v3/tokens", async (req, res) => {
@@ -415,6 +368,7 @@ app.post(
         token0,
         Number(chainId)
       );
+
       const tokenBAddress = await fetchTokenAddressByName(
         token1,
         Number(chainId)
