@@ -269,9 +269,10 @@ export async function swap(
 
   const slippageTolerance = 50;
 
+  console.log("Quote: ", Number(quote));
+
   if (!quote) {
     console.error("❌ USDC Pool Not Found");
-
     console.log("↩️ Using WMATIC route");
 
     const poolFee = await findPoolAndFee(
@@ -285,7 +286,7 @@ export async function swap(
     const poolFee2 = await findPoolAndFee(
       quoterContract,
       NATIVETOKENS[chainId].WRAPPED,
-      USDC[chainId],
+      tokenBAddress,
       adjAmount,
       slippageTolerance
     );
@@ -317,7 +318,7 @@ export async function swap(
         poolFee,
         NATIVETOKENS[chainId].WRAPPED,
         poolFee2,
-        USDC[chainId],
+        tokenBAddress,
       ]
     );
 
@@ -338,11 +339,19 @@ export async function swap(
   } else {
     const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
 
+    const poolFee = await findPoolAndFee(
+      quoterContract,
+      tokenAAddress,
+      tokenBAddress,
+      adjAmount,
+      slippageTolerance
+    );
+
     const expectedAmountB: BigNumber =
       await quoterContract?.callStatic?.quoteExactInputSingle?.(
         tokenAAddress,
         tokenBAddress,
-        3000,
+        poolFee,
         adjAmount,
         0
       );
@@ -354,14 +363,6 @@ export async function swap(
       .div(10000);
 
     console.log("Minimum Amount B: ", Number(minimumAmountB));
-
-    const poolFee = await findPoolAndFee(
-      quoterContract,
-      tokenAAddress,
-      tokenBAddress,
-      adjAmount,
-      50
-    );
 
     const swapTxInputs = [
       tokenAAddress,
