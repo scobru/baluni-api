@@ -1,12 +1,7 @@
-export type TokenConfig = {
-  [chainId: string]: {
-    [tokenName: string]: string;
-  };
-};
-
 export type InfraConfig = {
   [chainId: string]: {
-    [contractName: string]: string;
+    ROUTER: string;
+    BATCHER: string;
   };
 };
 
@@ -14,10 +9,31 @@ export type NetworkConfig = {
   [chainId: string]: string;
 };
 
-export type GeneralCOnfig = {
+export interface ProtocolConfig {
+  ROUTER: string;
+  QUOTER: string;
+  FACTORY: string;
+}
+
+export interface ChainConfig {
+  "uni-v3": ProtocolConfig;
+}
+
+export interface TokenConfig {
   [chainId: string]: {
-    [protocolName: string]: {
-      [contractName: string]: string;
+    WRAPPED: string;
+    NATIVE: string;
+  };
+}
+
+export interface OracleConfig {
+  [chainId: string]: {
+    [oracleName: string]: {
+      OFFCHAINORACLE: string;
     };
   };
-};
+}
+
+export interface GeneralCOnfig {
+  [key: string]: ChainConfig;
+}

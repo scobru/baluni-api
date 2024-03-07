@@ -3,9 +3,9 @@ import erc20Abi from "../abis/common/ERC20.json";
 import swapRouterAbi from "../abis/uniswap/SwapRouter.json";
 import routerAbi from "../abis/infra/Router.json";
 import quoterAbi from "../abis/uniswap/Quoter.json";
-import { PROTOCOLS, NETWORKS, INFRA } from "../constants";
+import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS, USDC } from "../constants";
 import { BigNumber } from "bignumber.js";
-
+import { findPoolAndFee, getAmountOut } from "./utils/getPoolFee";
 // import {
 //   AllowanceProvider,
 //   AllowanceTransfer,
@@ -16,6 +16,7 @@ import { BigNumber } from "bignumber.js";
 
 import env from "dotenv";
 import { parseEther } from "ethers/lib/utils";
+import { quotePair } from "./utils/quote";
 
 env.config();
 
@@ -179,6 +180,8 @@ export async function swap(
   //     };
   //   }
   // }
+  const quoterContract = new Contract(quoter, quoterAbi, wallet);
+  const quote = await quotePair(tokenAAddress, tokenBAddress, chainId);
 
   let Approvals = [];
   let Calldatas = [];
@@ -264,52 +267,132 @@ export async function swap(
     Calldatas.push(approvalAgentToRouter);
   }
 
-  const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-  const quoterAddress = quoter;
-  const quoterContract = new Contract(quoterAddress, quoterAbi, wallet);
-
   const slippageTolerance = 50;
 
-  const expectedAmountB: BigNumber =
-    await quoterContract?.callStatic?.quoteExactInputSingle?.(
+  if (!quote) {
+    console.error("❌ USDC Pool Not Found");
+
+    console.log("↩️ Using WMATIC route");
+
+    const poolFee = await findPoolAndFee(
+      quoterContract,
       tokenAAddress,
-      tokenBAddress,
-      3000,
+      NATIVETOKENS[chainId].WRAPPED,
       adjAmount,
-      0
+      slippageTolerance
     );
 
-  console.log("Expected Amount B: ", expectedAmountB.toString());
+    const poolFee2 = await findPoolAndFee(
+      quoterContract,
+      NATIVETOKENS[chainId].WRAPPED,
+      USDC[chainId],
+      adjAmount,
+      slippageTolerance
+    );
 
-  const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
-    .mul(10000 - slippageTolerance)
-    .div(10000);
+    let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
 
-  console.log("Minimum Amount B: ", Number(minimumAmountB));
+    // let minimumAmountB = await getAmountOut(
+    //   tokenAAddress,
+    //   NATIVETOKENS[chainId].WRAPPED,
+    //   poolFee,
+    //   adjAmount,
+    //   quoterContract,
+    //   50
+    // );
 
-  const swapTxInputs = [
-    tokenAAddress,
-    tokenBAddress,
-    3000,
-    agentAddress!,
-    swapDeadline,
-    adjAmount,
-    minimumAmountB,
-    0,
-  ];
+    //  let minimumAmountB2 = await getAmountOut(
+    //   NATIVETOKENS[chainId].WRAPPED,
+    //   USDC[chainId],
+    //   poolFee2,
+    //   minimumAmountB,
+    //   quoterContract,
+    //   50
+    // );
 
-  const calldataSwapAgentToRouter =
-    swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
-      swapTxInputs,
-    ]);
+    const path = ethers.utils.solidityPack(
+      ["address", "uint24", "address", "uint24", "address"],
+      [
+        tokenAAddress,
+        poolFee,
+        NATIVETOKENS[chainId].WRAPPED,
+        poolFee2,
+        USDC[chainId],
+      ]
+    );
 
-  const swapAgentToRouter = {
-    to: PROTOCOLS[chainId][protocol].ROUTER as string,
-    value: 0,
-    data: calldataSwapAgentToRouter,
-  };
+    let swapTxInputs = [
+      path,
+      agentAddress,
+      swapDeadline,
+      adjAmount,
+      0, // BigNumber.from(0),
+    ];
 
-  Calldatas.push(swapAgentToRouter);
+    const calldataSwapAgentToRouter =
+      swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
+        swapTxInputs,
+      ]);
+
+    const swapMultiAgentToRouter = {
+      to: PROTOCOLS[chainId][protocol].ROUTER as string,
+      value: 0,
+      data: calldataSwapAgentToRouter,
+    };
+
+    Calldatas.push(swapMultiAgentToRouter);
+  } else {
+    const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
+
+    const expectedAmountB: BigNumber =
+      await quoterContract?.callStatic?.quoteExactInputSingle?.(
+        tokenAAddress,
+        tokenBAddress,
+        3000,
+        adjAmount,
+        0
+      );
+
+    console.log("Expected Amount B: ", expectedAmountB.toString());
+
+    const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
+      .mul(10000 - slippageTolerance)
+      .div(10000);
+
+    console.log("Minimum Amount B: ", Number(minimumAmountB));
+
+    const poolFee = await findPoolAndFee(
+      quoterContract,
+      tokenAAddress,
+      tokenBAddress,
+      adjAmount,
+      50
+    );
+
+    const swapTxInputs = [
+      tokenAAddress,
+      tokenBAddress,
+      poolFee,
+      agentAddress!,
+      swapDeadline,
+      adjAmount,
+      minimumAmountB,
+      0,
+    ];
+
+    const calldataSwapAgentToRouter =
+      swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
+        swapTxInputs,
+      ]);
+
+    const swapAgentToRouter = {
+      to: PROTOCOLS[chainId][protocol].ROUTER as string,
+      value: 0,
+      data: calldataSwapAgentToRouter,
+    };
+
+    Calldatas.push(swapAgentToRouter);
+  }
 
   const TokensReturn = [tokenBAddress];
 

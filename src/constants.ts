@@ -3,6 +3,7 @@ import {
   GeneralCOnfig,
   TokenConfig,
   NetworkConfig,
+  OracleConfig,
 } from "./types/constants";
 
 export const BASEURL = "https://baluni-api.scobrudot.dev";
@@ -24,7 +25,7 @@ export const PROTOCOLS: GeneralCOnfig = {
   },
 };
 
-export const ORACLE: GeneralCOnfig = {
+export const ORACLE: OracleConfig = {
   "137": {
     "1inch-spot-agg": {
       OFFCHAINORACLE: "0x0AdDd25a91563696D8567Df78D5A01C9a991F9B8",
@@ -38,6 +39,10 @@ export const NATIVETOKENS: TokenConfig = {
     WRAPPED: "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
   },
   // Add the rest of yur tokens here
+};
+
+export const USDC: NetworkConfig = {
+  "137": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
 };
 
 export const NETWORKS: NetworkConfig = {
