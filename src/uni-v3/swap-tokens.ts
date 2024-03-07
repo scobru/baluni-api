@@ -60,6 +60,8 @@ export async function swap(
     adjAmount = ethers.BigNumber.from(parseEther(String(amount)));
   } else if (tokenADecimals == 6) {
     adjAmount = amount * 1e6;
+  } else if (tokenADecimals == 8) {
+    adjAmount = amount * 1e8;
   }
 
   if (adjAmount == 0) {
