@@ -76,4 +76,11 @@ export function getNetworkRPC(chainId: string): string | undefined {
   return NETWORKS[chainId];
 }
 
-export { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
+export {
+  INFRA,
+  PROTOCOLS,
+  ORACLE,
+  NATIVETOKENS,
+  NETWORKS,
+  BASEURL,
+} from "./constants";
