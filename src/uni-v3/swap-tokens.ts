@@ -322,7 +322,7 @@ export async function swap(
       ]
     );
 
-    let swapTxInputs = [path, agentAddress, String(swapDeadline), adjAmount, 0];
+    let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
 
     const calldataSwapAgentToRouter =
       swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
