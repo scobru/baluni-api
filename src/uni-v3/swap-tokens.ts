@@ -198,18 +198,18 @@ export async function swap(
   console.log("Allowance Router: ", Number(allowanceRouter));
   console.log("Allowance Agent: ", Number(allowanceAgent));
 
-  if (adjAmount > allowanceRouter) {
-    const dataApproveToRouter = tokenAContract.interface.encodeFunctionData(
-      "approve",
-      [router, ethers.BigNumber.from(2).pow(256).sub(1)]
-    );
-    const approvalToRouter = {
-      to: tokenAAddress,
-      value: 0,
-      data: dataApproveToRouter,
-    };
-    Approvals.push(approvalToRouter);
-  }
+  // if (adjAmount > allowanceRouter) {
+  //   const dataApproveToRouter = tokenAContract.interface.encodeFunctionData(
+  //     "approve",
+  //     [router, ethers.BigNumber.from(2).pow(256).sub(1)]
+  //   );
+  //   const approvalToRouter = {
+  //     to: tokenAAddress,
+  //     value: 0,
+  //     data: dataApproveToRouter,
+  //   };
+  //   Approvals.push(approvalToRouter);
+  // }
 
   if (adjAmount > allowanceAgent) {
     const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
