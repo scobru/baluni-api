@@ -46,6 +46,7 @@ const CONFIGURATIONS: Configurations = {
 };
 
 const TOKENS_URL = "https://tokens.uniswap.org";
+const TOKENS_URL2 = "https://gateway.ipfs.io/ipns/tokens.uniswap.org";
 
 app.use(express.json());
 
@@ -67,6 +68,21 @@ app.get("/:chainId/uni-v3/tokens", async (req, res) => {
 
     res.json(filteredTokens);
   } catch (error) {
+    try {
+      const response = await fetch(TOKENS_URL2);
+      const data = await response.json();
+      const { chainId } = req.params;
+
+      // Filter tokens by chainId if needed, for example, chainId 137 (Polygon)
+      const filteredTokens = data.tokens.filter(
+        (token: { chainId: number }) => token.chainId === Number(chainId)
+      );
+
+      res.json(filteredTokens);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch tokens", error: error });
+    }
+
     res.status(500).json({ message: "Failed to fetch tokens", error: error });
   }
 });
