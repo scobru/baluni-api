@@ -5,7 +5,8 @@ import routerAbi from "../abis/infra/Router.json";
 import quoterAbi from "../abis/uniswap/Quoter.json";
 import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS, USDC } from "../constants";
 import { BigNumber } from "bignumber.js";
-import { findPoolAndFee, getAmountOut } from "./utils/getPoolFee";
+import { findPoolAndFee } from "./utils/getPoolFee";
+
 // import {
 //   AllowanceProvider,
 //   AllowanceTransfer,
@@ -56,13 +57,9 @@ export async function swap(
 
   let adjAmount: any = ethers.BigNumber.from(0);
 
-  if (tokenADecimals == 18) {
-    adjAmount = amount * 1e18;
-  } else if (tokenADecimals == 6) {
-    adjAmount = amount * 1e6;
-  } else if (tokenADecimals == 8) {
-    adjAmount = amount * 1e8;
-  }
+  adjAmount = ethers.utils
+    .parseUnits(amount.toString(), tokenADecimals)
+    .toBigInt();
 
   if (adjAmount == 0) {
     throw new Error("Invalid Token Decimals");
@@ -446,13 +443,9 @@ export async function batchSwap(
     const tokenADecimals = await tokenAContract.decimals();
     console.log("Token A Decimals: ", tokenADecimals);
 
-    if (tokenADecimals == 18) {
-      adjAmount = swap.amount * 1e18;
-    } else if (tokenADecimals == 6) {
-      adjAmount = swap.amount * 1e6;
-    } else if (tokenADecimals == 8) {
-      adjAmount = swap.amount * 1e8;
-    }
+    adjAmount = ethers.utils
+      .parseUnits(swap.amount.toString(), tokenADecimals)
+      .toBigInt();
 
     if (adjAmount == 0) {
       throw new Error("Invalid Token Decimals");
