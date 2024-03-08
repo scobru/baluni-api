@@ -57,7 +57,7 @@ export async function swap(
   let adjAmount: any = ethers.BigNumber.from(0);
 
   if (tokenADecimals == 18) {
-    adjAmount = ethers.BigNumber.from(parseEther(String(amount)));
+    adjAmount = amount * 1e18;
   } else if (tokenADecimals == 6) {
     adjAmount = amount * 1e6;
   } else if (tokenADecimals == 8) {
@@ -416,7 +416,7 @@ export async function batchSwap(
   const InfraRouterContract = new Contract(infraRouter, routerAbi, wallet);
   const router = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].ROUTER);
   const quoter = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].QUOTER);
-
+  const quoterContract = new Contract(quoter, quoterAbi, wallet);
   let Approvals: any = {
     UNIROUTER: [],
     AGENT: [],
@@ -447,9 +447,11 @@ export async function batchSwap(
     console.log("Token A Decimals: ", tokenADecimals);
 
     if (tokenADecimals == 18) {
-      adjAmount = ethers.BigNumber.from(parseEther(String(swap.amount)));
+      adjAmount = swap.amount * 1e18;
     } else if (tokenADecimals == 6) {
       adjAmount = swap.amount * 1e6;
+    } else if (tokenADecimals == 8) {
+      adjAmount = swap.amount * 1e8;
     }
 
     if (adjAmount == 0) {
@@ -488,9 +490,6 @@ export async function batchSwap(
       Approvals.push(approvalToRouter);
     }
 
-    const swapRouterContract = new Contract(router, swapRouterAbi, wallet);
-
-    // AGENT CALLS
     const dataTransferFromSenderToAgent =
       tokenAContract.interface.encodeFunctionData("transferFrom", [
         swap.address!,
@@ -528,51 +527,132 @@ export async function batchSwap(
       Calldatas.push(approvalAgentToRouter);
     }
 
-    const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-    const quoterAddress = quoter;
-    const quoterContract = new Contract(quoterAddress, quoterAbi, wallet);
-    const slippageTolerance = 50;
-    const expectedAmountB: BigNumber =
-      await quoterContract?.callStatic?.quoteExactInputSingle?.(
+    const quote = await quotePair(tokenAAddress, tokenBAddress, swap.chainId);
+    const swapRouterContract = new Contract(router, swapRouterAbi, wallet);
+    const slippageTolerance = 100;
+
+    if (!quote) {
+      console.error("❌ USDC Pool Not Found");
+      console.log("↩️ Using WMATIC route");
+
+      const poolFee = await findPoolAndFee(
+        quoterContract,
         tokenAAddress,
-        tokenBAddress,
-        3000,
+        NATIVETOKENS[swap.chainId].WRAPPED,
         adjAmount,
-        0
+        slippageTolerance
       );
 
-    console.log("Expected Amount B: ", expectedAmountB.toString());
+      const poolFee2 = await findPoolAndFee(
+        quoterContract,
+        NATIVETOKENS[swap.chainId].WRAPPED,
+        tokenBAddress,
+        adjAmount,
+        slippageTolerance
+      );
 
-    const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
-      .mul(10000 - slippageTolerance)
-      .div(10000);
+      let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
 
-    console.log("Minimum Amount B: ", Number(minimumAmountB));
+      // let minimumAmountB = await getAmountOut(
+      //   tokenAAddress,
+      //   NATIVETOKENS[chainId].WRAPPED,
+      //   poolFee,
+      //   adjAmount,
+      //   quoterContract,
+      //   50
+      // );
 
-    const swapTxInputs = [
-      tokenAAddress,
-      tokenBAddress,
-      3000,
-      agentAddress!,
-      swapDeadline,
-      adjAmount,
-      minimumAmountB,
-      0,
-    ];
+      //  let minimumAmountB2 = await getAmountOut(
+      //   NATIVETOKENS[chainId].WRAPPED,
+      //   USDC[chainId],
+      //   poolFee2,
+      //   minimumAmountB,
+      //   quoterContract,
+      //   50
+      // );
 
-    const calldataSwapAgentToRouter =
-      swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
-        swapTxInputs,
-      ]);
+      const path = ethers.utils.solidityPack(
+        ["address", "uint24", "address", "uint24", "address"],
+        [
+          tokenAAddress,
+          poolFee,
+          NATIVETOKENS[swap.chainId].WRAPPED,
+          poolFee2,
+          tokenBAddress,
+        ]
+      );
 
-    const swapAgentToRouter = {
-      to: router as string,
-      value: 0,
-      data: calldataSwapAgentToRouter,
-    };
+      let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
 
-    Calldatas.push(swapAgentToRouter);
-    TokensReturn.push(tokenBAddress);
+      const calldataSwapAgentToRouter =
+        swapRouterContract.interface.encodeFunctionData("exactInput", [
+          swapTxInputs,
+        ]);
+
+      const swapMultiAgentToRouter = {
+        to: PROTOCOLS[swap.chainId][swap.protocol].ROUTER as string,
+        value: 0,
+        data: calldataSwapAgentToRouter,
+      };
+
+      Calldatas.push(swapMultiAgentToRouter);
+    } else {
+      const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
+
+      const quoterAddress = quoter;
+      const quoterContract = new Contract(quoterAddress, quoterAbi, wallet);
+
+      const slippageTolerance = 100;
+      const expectedAmountB: BigNumber =
+        await quoterContract?.callStatic?.quoteExactInputSingle?.(
+          tokenAAddress,
+          tokenBAddress,
+          3000,
+          adjAmount,
+          0
+        );
+
+      console.log("Expected Amount B: ", expectedAmountB.toString());
+
+      const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
+        .mul(10000 - slippageTolerance)
+        .div(10000);
+
+      console.log("Minimum Amount B: ", Number(minimumAmountB));
+
+      const poolFee = await findPoolAndFee(
+        quoterContract,
+        tokenAAddress,
+        tokenBAddress,
+        adjAmount,
+        slippageTolerance
+      );
+
+      const swapTxInputs = [
+        tokenAAddress,
+        tokenBAddress,
+        poolFee,
+        agentAddress!,
+        swapDeadline,
+        adjAmount,
+        minimumAmountB,
+        0,
+      ];
+
+      const calldataSwapAgentToRouter =
+        swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
+          swapTxInputs,
+        ]);
+
+      const swapAgentToRouter = {
+        to: router as string,
+        value: 0,
+        data: calldataSwapAgentToRouter,
+      };
+
+      Calldatas.push(swapAgentToRouter);
+      TokensReturn.push(tokenBAddress);
+    }
   }
 
   return {
