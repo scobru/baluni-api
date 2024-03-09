@@ -1,41 +1,7 @@
 import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
-import { swap, batchSwap } from "./uni-v3/swap-tokens";
+import { buildSwap, buildBatchSwap } from "./uni-v3/swap-tokens";
 
-export function swapUniV3(
-  address: string,
-  token0: string,
-  token1: string,
-  reverse: string,
-  protocol: string,
-  chainId: number,
-  amount: number
-) {
-  return swap(address, token0, token1, reverse, protocol, chainId, amount);
-}
-
-export function batchSwapUniV3([...args]: [
-  string,
-  string,
-  string,
-  string,
-  string,
-  number,
-  number
-][]) {
-  const convertedArgs = args.map(
-    ([address, token0, token1, reverse, protocol, chainId, amount]) => ({
-      address,
-      token0,
-      token1,
-      reverse: reverse === "true",
-      protocol,
-      chainId,
-      amount,
-    })
-  );
-
-  return batchSwap(convertedArgs);
-}
+export { buildSwap, buildBatchSwap };
 
 // Example function that uses the INFRA config
 export function getInfraAddress(

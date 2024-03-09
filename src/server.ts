@@ -2,7 +2,7 @@
 import express from "express";
 import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 
-import { swap } from "./uni-v3/swap-tokens";
+import { buildSwap } from "./uni-v3/swap-tokens";
 
 const app = express();
 const port = 3001;
@@ -358,10 +358,18 @@ app.post("/write-config", async (req, res) => {
 
 // Example: POST /swap/0x1234.../USDC/ETH/false/uni-v3/1/100
 app.post(
-  "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount",
+  "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount/:slippage",
   async (req, res) => {
-    const { address, token0, token1, reverse, protocol, chainId, amount } =
-      req.params;
+    const {
+      address,
+      token0,
+      token1,
+      reverse,
+      protocol,
+      chainId,
+      amount,
+      slippage,
+    } = req.params;
 
     try {
       const tokenAAddress = await fetchTokenAddressByName(
@@ -374,14 +382,15 @@ app.post(
         Number(chainId)
       );
 
-      const swapResult = await swap(
+      const swapResult = await buildSwap(
         address,
-        String(tokenAAddress)!,
-        String(tokenBAddress)!,
-        reverse,
+        tokenAAddress!,
+        tokenBAddress!,
+        Boolean(reverse),
         protocol,
-        parseInt(chainId),
-        parseFloat(amount)
+        chainId,
+        amount,
+        Number(slippage)
       );
 
       // Prepare and send the response using the structure from the swap function output

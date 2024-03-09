@@ -47,5 +47,5 @@ export const USDC: NetworkConfig = {
 
 export const NETWORKS: NetworkConfig = {
   "137":
-    "https://polygon-mainnet.g.alchemy.com/v2/u1t0bPCxL7FksVGLrMLW950RqujroHhP",
+    "https://polygon-mainnet.g.alchemy.com/v2/nPBTC9lNonD1KsZGmuXSRGfVh6O63x2_",
 };

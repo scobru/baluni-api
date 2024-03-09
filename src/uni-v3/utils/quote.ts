@@ -10,24 +10,19 @@ export async function quotePair(
   chainId: number
 ) {
   const uniswapV3FactoryAddress = PROTOCOLS[chainId]["uni-v3"].FACTORY;
-  const { PRIVATE_KEY } = process.env;
-
   // Connect to the BSC mainnet
   // const provider = ethers.getDefaultProvider();
   const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
-
-  // Sign the transaction with the contract owner's private key
-  const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
   // Get the contract instance
   const factoryContract = new ethers.Contract(
     uniswapV3FactoryAddress,
     uniswapV3FactoryAbi,
-    wallet
+    provider
   );
 
-  const tokenAContract = new ethers.Contract(tokenAAddress, erc20Abi, wallet);
-  const tokenBContract = new ethers.Contract(tokenBAddress, erc20Abi, wallet);
+  const tokenAContract = new ethers.Contract(tokenAAddress, erc20Abi, provider);
+  const tokenBContract = new ethers.Contract(tokenBAddress, erc20Abi, provider);
 
   // Fetch decimals for both tokens
   const tokenADecimals = await tokenAContract.decimals();
@@ -41,7 +36,7 @@ export async function quotePair(
     const poolContract = new ethers.Contract(
       poolAddress,
       uniswapV3PoolAbi,
-      wallet
+      provider
     );
     const slot0 = await poolContract.slot0();
 

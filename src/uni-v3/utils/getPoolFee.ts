@@ -8,7 +8,6 @@ export async function findPoolAndFee(
   slippage: number
 ) {
   console.log("Finding Pool...");
-
   let poolFee: Number = 0;
 
   poolFee = await getPoolFee(
@@ -41,12 +40,12 @@ export async function getAmountOut(
       0
     );
 
-    console.log(
-      `Amount A: ${swapAmount.toString()}`,
-      `Expected amount B: ${expectedAmountB.toString()}`,
-      `Pool Fee: ${poolFee}`,
-      `Slippage Tolerance: ${slippageTolerance}`
-    );
+    // console.log(
+    //   `Amount A: ${swapAmount.toString()}`,
+    //   `Expected amount B: ${expectedAmountB.toString()}`,
+    //   `Pool Fee: ${poolFee}`,
+    //   `Slippage Tolerance: ${slippageTolerance}`
+    // );
 
     let minimumAmountB = expectedAmountB
       .mul(10000 - slippageTolerance)
@@ -87,6 +86,8 @@ export async function getPoolFee(
       minimumAmountBSoFar = minimumAmountB;
     }
   }
+
+  console.log("Best Pool Fee: ", bestPoolFee);
 
   return bestPoolFee;
 }

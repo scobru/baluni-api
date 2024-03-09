@@ -6,6 +6,7 @@ import quoterAbi from "../abis/uniswap/Quoter.json";
 import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS, USDC } from "../constants";
 import { BigNumber } from "bignumber.js";
 import { findPoolAndFee } from "./utils/getPoolFee";
+import { quotePair } from "./utils/quote";
 
 // import {
 //   AllowanceProvider,
@@ -16,56 +17,69 @@ import { findPoolAndFee } from "./utils/getPoolFee";
 // } from "@uniswap/permit2-sdk";
 
 import env from "dotenv";
-import { parseEther } from "ethers/lib/utils";
-import { quotePair } from "./utils/quote";
+import { parseUnits } from "ethers/lib/utils";
 
 env.config();
 
-export async function swap(
+function getAdjAmount(_amount, _decimals) {
+  let _adjAmount;
+
+  if (_decimals == 18) {
+    _adjAmount = parseUnits(_amount, 18);
+  } else if (_decimals == 6) {
+    _adjAmount = parseUnits(_amount, 6);
+  } else if (_decimals == 8) {
+    _adjAmount = parseUnits(_amount, 8);
+  }
+
+  return _adjAmount;
+}
+
+export async function buildSwap(
   address: string,
   token0: string,
   token1: string,
-  reverse: string,
+  reverse: boolean,
   protocol: string,
-  chainId: number,
-  amount: number
+  chainId: string,
+  amount: string,
+  slippage: number
 ) {
+  console.log("Building Swap tx");
   console.log(address, token0, token1, reverse, protocol, chainId, amount);
 
+  const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
   const quoter = String(PROTOCOLS[chainId][protocol].QUOTER);
   const router = String(PROTOCOLS[chainId][protocol].ROUTER);
-
+  const swapRouterContract = new Contract(router, swapRouterAbi, provider);
   const infraRouter = String(INFRA[chainId].ROUTER);
-
-  const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
-  const wallet = new Wallet(String(process.env.PRIVATE_KEY), provider);
-
-  const InfraRouterContract = new Contract(infraRouter, routerAbi, wallet);
+  const InfraRouterContract = new Contract(infraRouter, routerAbi, provider);
   const agentAddress = await InfraRouterContract?.getAgentAddress(address);
-
-  const tokenAAddress = reverse == "true" ? token1 : token0;
-  const tokenBAddress = reverse == "true" ? token0 : token1;
-
-  const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
-  const tokenBContract = new Contract(tokenBAddress, erc20Abi, wallet);
-
+  const tokenAAddress = reverse == true ? token1 : token0;
+  const tokenBAddress = reverse == true ? token0 : token1;
+  const tokenAContract = new Contract(tokenAAddress, erc20Abi, provider);
+  const tokenBContract = new Contract(tokenBAddress, erc20Abi, provider);
   const tokenADecimals = await tokenAContract.decimals();
-  const tokenBDecimals = await tokenBContract.decimals();
-
-  console.log("Token A Decimals: ", tokenADecimals);
-  console.log("Token B Decimals: ", tokenBDecimals);
+  // const tokenBDecimals = await tokenBContract.decimals();
 
   let adjAmount: any = ethers.BigNumber.from(0);
 
-  adjAmount = ethers.utils
-    .parseUnits(amount.toString(), tokenADecimals)
-    .toBigInt();
+  console.log("Adj Amount: ", Number(amount));
+  console.log("Token A Decimals: ", Number(tokenADecimals));
+
+  if (tokenADecimals == 0) {
+    throw new Error("Invalid Token Decimals");
+  }
+
+  adjAmount = getAdjAmount(amount, tokenADecimals);
+
+  // adjAmount = ethers.utils.parseUnits(amount, tokenADecimals).toBigInt();
 
   if (adjAmount == 0) {
     throw new Error("Invalid Token Decimals");
   }
 
-  console.log("Adjusted Amount: ", Number(adjAmount));
+  console.log("Adj Amount: ", Number(adjAmount));
 
   // let PermitData = {
   //   ROUTER: {},
@@ -179,21 +193,14 @@ export async function swap(
   //     };
   //   }
   // }
-  const quoterContract = new Contract(quoter, quoterAbi, wallet);
-  const quote = await quotePair(tokenAAddress, tokenBAddress, chainId);
 
-  let Approvals = [];
-  let Calldatas = [];
-
-  console.log("Router: ", router);
-  console.log("Agent: ", agentAddress);
-  console.log("Address: ", address);
-
+  const quoterContract = new Contract(quoter, quoterAbi, provider);
+  const quote = await quotePair(tokenAAddress, tokenBAddress, Number(chainId));
   const allowanceRouter = await tokenAContract?.allowance(address, router);
   const allowanceAgent = await tokenAContract?.allowance(address, agentAddress);
 
-  console.log("Allowance Router: ", Number(allowanceRouter));
-  console.log("Allowance Agent: ", Number(allowanceAgent));
+  let Approvals = [];
+  let Calldatas = [];
 
   // if (adjAmount > allowanceRouter) {
   //   const dataApproveToRouter = tokenAContract.interface.encodeFunctionData(
@@ -208,7 +215,7 @@ export async function swap(
   //   Approvals.push(approvalToRouter);
   // }
 
-  if (adjAmount > allowanceAgent) {
+  if (allowanceAgent && adjAmount > allowanceAgent) {
     const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
       "approve",
       [agentAddress, ethers.BigNumber.from(2).pow(256).sub(1)]
@@ -222,8 +229,6 @@ export async function swap(
 
     Approvals.push(approvalToAgent);
   }
-
-  const swapRouterContract = new Contract(router, swapRouterAbi, wallet);
 
   // AGENT CALLS
   const dataTransferFromSenderToAgent =
@@ -263,14 +268,11 @@ export async function swap(
     Calldatas.push(approvalAgentToRouter);
   }
 
-  const slippageTolerance = 100;
-
-  console.log("Quote: ", Number(quote));
+  const slippageTolerance = slippage;
 
   if (!quote) {
     console.error("❌ USDC Pool Not Found");
     console.log("↩️ Using WMATIC route");
-
     const poolFee = await findPoolAndFee(
       quoterContract,
       tokenAAddress,
@@ -287,7 +289,7 @@ export async function swap(
       slippageTolerance
     );
 
-    let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
+    let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
 
     // let minimumAmountB = await getAmountOut(
     //   tokenAAddress,
@@ -334,7 +336,6 @@ export async function swap(
     Calldatas.push(swapMultiAgentToRouter);
   } else {
     const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-
     const poolFee = await findPoolAndFee(
       quoterContract,
       tokenAAddress,
@@ -351,14 +352,9 @@ export async function swap(
         adjAmount,
         0
       );
-
-    console.log("Expected Amount B: ", expectedAmountB.toString());
-
     const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
       .mul(10000 - slippageTolerance)
       .div(10000);
-
-    console.log("Minimum Amount B: ", Number(minimumAmountB));
 
     const swapTxInputs = [
       tokenAAddress,
@@ -370,12 +366,10 @@ export async function swap(
       minimumAmountB,
       0,
     ];
-
     const calldataSwapAgentToRouter =
       swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
         swapTxInputs,
       ]);
-
     const swapAgentToRouter = {
       to: PROTOCOLS[chainId][protocol].ROUTER as string,
       value: 0,
@@ -394,31 +388,32 @@ export async function swap(
   };
 }
 
-export async function batchSwap(
+export async function buildBatchSwap(
   swaps: Array<{
     address: string;
     token0: string;
     token1: string;
     reverse: boolean;
     protocol: string;
-    chainId: number;
-    amount: number;
+    chainId: string;
+    amount: string;
+    slippage: number;
   }>
 ) {
+  console.log("Building Batch Swap tx");
+
   const provider = new ethers.providers.JsonRpcProvider(
     NETWORKS[swaps[0].chainId]
   );
-  const wallet = new Wallet(String(process.env.PRIVATE_KEY), provider);
   const infraRouter = String(INFRA[swaps[0].chainId].ROUTER);
-  const InfraRouterContract = new Contract(infraRouter, routerAbi, wallet);
+  const InfraRouterContract = new Contract(infraRouter, routerAbi, provider);
   const router = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].ROUTER);
-  const quoter = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].QUOTER);
-  const quoterContract = new Contract(quoter, quoterAbi, wallet);
-  let Approvals: any = {
-    UNIROUTER: [],
-    AGENT: [],
-  };
+  const swapRouterContract = new Contract(router, swapRouterAbi, provider);
 
+  const quoter = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].QUOTER);
+  const quoterContract = new Contract(quoter, quoterAbi, provider);
+
+  let Approvals: any = [];
   let Calldatas = [];
   let TokensReturn = [];
 
@@ -426,13 +421,17 @@ export async function batchSwap(
     const agentAddress = await InfraRouterContract?.getAgentAddress(
       swap.address
     );
+
     const tokenAAddress = swap.reverse ? swap.token1 : swap.token0;
     const tokenBAddress = swap.reverse ? swap.token0 : swap.token1;
-    const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
+
+    const tokenAContract = new Contract(tokenAAddress, erc20Abi, provider);
+
     const allowanceAgent = await tokenAContract?.allowance(
       swap.address,
       agentAddress
     );
+
     const allowanceRouter = await tokenAContract?.allowance(
       swap.address,
       router
@@ -441,7 +440,6 @@ export async function batchSwap(
     let adjAmount: any = ethers.BigNumber.from(0);
 
     const tokenADecimals = await tokenAContract.decimals();
-    console.log("Token A Decimals: ", tokenADecimals);
 
     adjAmount = ethers.utils
       .parseUnits(swap.amount.toString(), tokenADecimals)
@@ -450,8 +448,6 @@ export async function batchSwap(
     if (adjAmount == 0) {
       throw new Error("Invalid Token Decimals");
     }
-
-    console.log("Adjusted Amount: ", Number(adjAmount));
 
     if (adjAmount > allowanceAgent) {
       const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
@@ -520,8 +516,11 @@ export async function batchSwap(
       Calldatas.push(approvalAgentToRouter);
     }
 
-    const quote = await quotePair(tokenAAddress, tokenBAddress, swap.chainId);
-    const swapRouterContract = new Contract(router, swapRouterAbi, wallet);
+    const quote = await quotePair(
+      tokenAAddress,
+      tokenBAddress,
+      Number(swap.chainId)
+    );
     const slippageTolerance = 100;
 
     if (!quote) {
@@ -589,12 +588,11 @@ export async function batchSwap(
       };
 
       Calldatas.push(swapMultiAgentToRouter);
+      TokensReturn.push(tokenBAddress);
     } else {
       const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-
       const quoterAddress = quoter;
-      const quoterContract = new Contract(quoterAddress, quoterAbi, wallet);
-
+      const quoterContract = new Contract(quoterAddress, quoterAbi, provider);
       const slippageTolerance = 100;
       const expectedAmountB: BigNumber =
         await quoterContract?.callStatic?.quoteExactInputSingle?.(
@@ -604,8 +602,6 @@ export async function batchSwap(
           adjAmount,
           0
         );
-
-      console.log("Expected Amount B: ", expectedAmountB.toString());
 
       const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
         .mul(10000 - slippageTolerance)
