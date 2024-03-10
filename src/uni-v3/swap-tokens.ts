@@ -2,6 +2,7 @@ import { Contract, Wallet, ethers } from "ethers";
 import erc20Abi from "../abis/common/ERC20.json";
 import swapRouterAbi from "../abis/uniswap/SwapRouter.json";
 import routerAbi from "../abis/infra/Router.json";
+import agentAbi from "../abis/infra/Agent.json";
 import quoterAbi from "../abis/uniswap/Quoter.json";
 import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS, USDC } from "../constants";
 import { BigNumber } from "bignumber.js";
@@ -17,7 +18,7 @@ import { quotePair } from "./utils/quote";
 // } from "@uniswap/permit2-sdk";
 
 import env from "dotenv";
-import { parseUnits } from "ethers/lib/utils";
+import { getAddress, parseUnits } from "ethers/lib/utils";
 
 env.config();
 
@@ -58,9 +59,14 @@ export async function buildSwap(
   const tokenAAddress = reverse == true ? token1 : token0;
   const tokenBAddress = reverse == true ? token0 : token1;
   const tokenAContract = new Contract(tokenAAddress, erc20Abi, provider);
-  const tokenBContract = new Contract(tokenBAddress, erc20Abi, provider);
   const tokenADecimals = await tokenAContract.decimals();
+  // const tokenBContract = new Contract(tokenBAddress, erc20Abi, provider);
   // const tokenBDecimals = await tokenBContract.decimals();
+
+  let Approvals = [];
+  let Calldatas = [];
+
+  console.log("::API:: Checking if Agent Exists");
 
   let adjAmount: any = ethers.BigNumber.from(0);
 
@@ -199,9 +205,6 @@ export async function buildSwap(
   const allowanceRouter = await tokenAContract?.allowance(address, router);
   const allowanceAgent = await tokenAContract?.allowance(address, agentAddress);
 
-  let Approvals = [];
-  let Calldatas = [];
-
   // if (adjAmount > allowanceRouter) {
   //   const dataApproveToRouter = tokenAContract.interface.encodeFunctionData(
   //     "approve",
@@ -215,22 +218,53 @@ export async function buildSwap(
   //   Approvals.push(approvalToRouter);
   // }
 
+  const gasPrice = await provider.getGasPrice();
+  const gasLimit = 30000000;
+
   if (allowanceAgent && adjAmount > allowanceAgent) {
+    console.log("::API:: Agent does not have enough allowance");
     const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
       "approve",
-      [agentAddress, ethers.BigNumber.from(2).pow(256).sub(1)]
+      [agentAddress, ethers.constants.MaxUint256]
     );
 
     const approvalToAgent = {
       to: tokenAAddress,
       value: 0,
       data: dataApproveToAgent,
+      gasLimit: gasLimit,
+      gasPrice: gasPrice.add(gasPrice.div(2)),
     };
 
     Approvals.push(approvalToAgent);
   }
 
+  const allowanceAgentToRouter = await tokenAContract?.allowance(
+    agentAddress,
+    router
+  );
+
+  if (allowanceAgentToRouter < adjAmount) {
+    console.log("::API:: Agent does not have enough allowance for Router");
+    const calldataApproveAgentToRouter =
+      tokenAContract.interface.encodeFunctionData("approve", [
+        router,
+        ethers.constants.MaxUint256,
+      ]);
+
+    const approvalAgentToRouter = {
+      to: tokenAAddress,
+      value: 0,
+      data: calldataApproveAgentToRouter,
+      gasLimit: gasLimit,
+      gasPrice: gasPrice.add(gasPrice.div(2)),
+    };
+
+    Calldatas.push(approvalAgentToRouter);
+  }
+
   // AGENT CALLS
+  console.log("::API:: Transfering tokens to agent Call");
   const dataTransferFromSenderToAgent =
     tokenAContract.interface.encodeFunctionData("transferFrom", [
       address!,
@@ -242,31 +276,15 @@ export async function buildSwap(
     to: tokenAAddress,
     value: 0,
     data: dataTransferFromSenderToAgent,
+    gasLimit: gasLimit,
+    gasPrice: gasPrice.add(gasPrice.div(2)),
   };
 
   Calldatas.push(transferFromSenderToAgent);
 
+  console.log("::API:: Checking if Agent has enough allowance for Router");
+
   //check allowance Agent to Router
-  const allowanceAgentToRouter = await tokenAContract?.allowance(
-    agentAddress,
-    router
-  );
-
-  if (allowanceAgentToRouter < adjAmount) {
-    const calldataApproveAgentToRouter =
-      tokenAContract.interface.encodeFunctionData("approve", [
-        router,
-        adjAmount,
-      ]);
-
-    const approvalAgentToRouter = {
-      to: tokenAAddress,
-      value: 0,
-      data: calldataApproveAgentToRouter,
-    };
-
-    Calldatas.push(approvalAgentToRouter);
-  }
 
   const slippageTolerance = slippage;
 
@@ -280,7 +298,6 @@ export async function buildSwap(
       adjAmount,
       slippageTolerance
     );
-
     const poolFee2 = await findPoolAndFee(
       quoterContract,
       NATIVETOKENS[chainId].WRAPPED,
@@ -322,6 +339,7 @@ export async function buildSwap(
 
     let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
 
+    console.log("::API:: Building Swap tx");
     const calldataSwapAgentToRouter =
       swapRouterContract.interface.encodeFunctionData("exactInput", [
         swapTxInputs,
@@ -331,6 +349,8 @@ export async function buildSwap(
       to: PROTOCOLS[chainId][protocol].ROUTER as string,
       value: 0,
       data: calldataSwapAgentToRouter,
+      gasLimit: gasLimit,
+      gasPrice: gasPrice.add(gasPrice.div(2)),
     };
 
     Calldatas.push(swapMultiAgentToRouter);
@@ -366,6 +386,8 @@ export async function buildSwap(
       minimumAmountB,
       0,
     ];
+
+    console.log("::API:: Building Swap tx");
     const calldataSwapAgentToRouter =
       swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
         swapTxInputs,
@@ -374,12 +396,19 @@ export async function buildSwap(
       to: PROTOCOLS[chainId][protocol].ROUTER as string,
       value: 0,
       data: calldataSwapAgentToRouter,
+      gasLimit: gasLimit,
+      gasPrice: gasPrice.add(gasPrice.div(2)),
     };
 
     Calldatas.push(swapAgentToRouter);
   }
 
+  console.log("::API:: Push Tokens Return");
   const TokensReturn = [tokenBAddress];
+
+  console.log("::API:: Approvals", Approvals);
+  console.log("::API:: Calldatas", Calldatas);
+  console.log("::API:: TokensReturn", TokensReturn);
 
   return {
     Approvals,
@@ -432,11 +461,6 @@ export async function buildBatchSwap(
       agentAddress
     );
 
-    const allowanceRouter = await tokenAContract?.allowance(
-      swap.address,
-      router
-    );
-
     let adjAmount: any = ethers.BigNumber.from(0);
 
     const tokenADecimals = await tokenAContract.decimals();
@@ -464,21 +488,6 @@ export async function buildBatchSwap(
       Approvals.push(approvalToAgent);
     }
 
-    if (adjAmount > allowanceRouter) {
-      const dataApproveToRouter = tokenAContract.interface.encodeFunctionData(
-        "approve",
-        [router, ethers.BigNumber.from(2).pow(256).sub(1)]
-      );
-
-      const approvalToRouter: { to: string; value: number; data: string } = {
-        to: tokenAAddress,
-        value: 0,
-        data: dataApproveToRouter,
-      };
-
-      Approvals.push(approvalToRouter);
-    }
-
     const dataTransferFromSenderToAgent =
       tokenAContract.interface.encodeFunctionData("transferFrom", [
         swap.address!,
@@ -504,7 +513,7 @@ export async function buildBatchSwap(
       const calldataApproveAgentToRouter =
         tokenAContract.interface.encodeFunctionData("approve", [
           router,
-          adjAmount,
+          ethers.BigNumber.from(2).pow(256).sub(1),
         ]);
 
       const approvalAgentToRouter = {
@@ -606,8 +615,6 @@ export async function buildBatchSwap(
       const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
         .mul(10000 - slippageTolerance)
         .div(10000);
-
-      console.log("Minimum Amount B: ", Number(minimumAmountB));
 
       const poolFee = await findPoolAndFee(
         quoterContract,

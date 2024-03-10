@@ -10,8 +10,7 @@ export const BASEURL = "https://baluni-api.scobrudot.dev";
 
 export const INFRA: InfraConfig = {
   "137": {
-    BATCHER: "0xA7d0bdC6235a745d283aCF6b036b54E77AFFCAd5",
-    ROUTER: "0x19F330eBa98FFd47A01F8f2afB0b9863a24497dD",
+    ROUTER: "0xbce92137174e4c093591ea1029e224f97e17344b",
   },
 };
 

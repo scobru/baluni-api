@@ -7,7 +7,6 @@ export async function findPoolAndFee(
   swapAmount: BigNumber,
   slippage: number
 ) {
-  console.log("Finding Pool...");
   let poolFee: Number = 0;
 
   poolFee = await getPoolFee(
@@ -86,8 +85,6 @@ export async function getPoolFee(
       minimumAmountBSoFar = minimumAmountB;
     }
   }
-
-  console.log("Best Pool Fee: ", bestPoolFee);
 
   return bestPoolFee;
 }

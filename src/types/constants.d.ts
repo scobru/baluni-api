@@ -1,7 +1,6 @@
 export type InfraConfig = {
   [chainId: string]: {
     ROUTER: string;
-    BATCHER: string;
   };
 };
 

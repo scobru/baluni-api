@@ -1,7 +1,21 @@
 import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 import { buildSwap, buildBatchSwap } from "./uni-v3/swap-tokens";
+import {
+  depositToYearn,
+  redeemFromYearn,
+  accuredYearnInterest,
+  previewWithdraw,
+  getVaultAsset,
+} from "./yearn/deposit-redeem";
 
 export { buildSwap, buildBatchSwap };
+export {
+  depositToYearn,
+  redeemFromYearn,
+  accuredYearnInterest,
+  previewWithdraw,
+  getVaultAsset,
+};
 
 // Example function that uses the INFRA config
 export function getInfraAddress(
