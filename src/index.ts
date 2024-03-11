@@ -2,7 +2,9 @@ import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 import { buildSwap, buildBatchSwap } from "./uni-v3/swap-tokens";
 import {
   depositToYearn,
+  depositToYearnBatched,
   redeemFromYearn,
+  redeemFromYearnBatched
   accuredYearnInterest,
   previewWithdraw,
   getVaultAsset,
@@ -11,7 +13,9 @@ import {
 export { buildSwap, buildBatchSwap };
 export {
   depositToYearn,
+  depositToYearnBatched,
   redeemFromYearn,
+  redeemFromYearnBatched,
   accuredYearnInterest,
   previewWithdraw,
   getVaultAsset,
