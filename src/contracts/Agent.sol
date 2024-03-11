@@ -35,14 +35,7 @@ contract Agent {
     function execute(
         Call[] calldata calls,
         address[] calldata tokensReturn
-    ) external {
-        _execute(calls, tokensReturn);
-    }
-
-    function _execute(
-        Call[] calldata calls,
-        address[] calldata tokensReturn
-    ) internal {
+    ) external onlyRouter {
         for (uint i = 0; i < calls.length; i++) {
             (bool success, ) = calls[i].to.call{value: calls[i].value}(
                 calls[i].data
@@ -58,7 +51,9 @@ contract Agent {
         return router;
     }
 
-    function _chargeFees(address[] calldata tokensReturn) internal {
+    function _chargeFees(
+        address[] calldata tokensReturn
+    ) internal returns (uint256) {
         uint256 amount;
         for (uint256 i = 0; i < tokensReturn.length; i++) {
             address token = tokensReturn[i];

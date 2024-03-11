@@ -2,23 +2,13 @@ import { Contract, Wallet, ethers } from "ethers";
 import erc20Abi from "../abis/common/ERC20.json";
 import swapRouterAbi from "../abis/uniswap/SwapRouter.json";
 import routerAbi from "../abis/infra/Router.json";
-import agentAbi from "../abis/infra/Agent.json";
 import quoterAbi from "../abis/uniswap/Quoter.json";
 import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS, USDC } from "../constants";
 import { BigNumber } from "bignumber.js";
 import { findPoolAndFee } from "./utils/getPoolFee";
 import { quotePair } from "./utils/quote";
-
-// import {
-//   AllowanceProvider,
-//   AllowanceTransfer,
-//   PERMIT2_ADDRESS,
-//   PermitSingle,
-//   MaxAllowanceTransferAmount,
-// } from "@uniswap/permit2-sdk";
-
 import env from "dotenv";
-import { getAddress, parseUnits } from "ethers/lib/utils";
+import { parseUnits } from "ethers/lib/utils";
 
 env.config();
 
@@ -37,6 +27,7 @@ function getAdjAmount(_amount, _decimals) {
 }
 
 export async function buildSwap(
+  wallet: Wallet,
   address: string,
   token0: string,
   token1: string,
@@ -47,27 +38,25 @@ export async function buildSwap(
   slippage: number
 ) {
   console.log("Building Swap tx");
-  console.log(address, token0, token1, reverse, protocol, chainId, amount);
 
-  const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
   const quoter = String(PROTOCOLS[chainId][protocol].QUOTER);
-  const router = String(PROTOCOLS[chainId][protocol].ROUTER);
-  const swapRouterContract = new Contract(router, swapRouterAbi, provider);
+  const uniRouter = String(PROTOCOLS[chainId][protocol].ROUTER);
+  const swapRouterContract = new Contract(uniRouter, swapRouterAbi, wallet);
   const infraRouter = String(INFRA[chainId].ROUTER);
-  const InfraRouterContract = new Contract(infraRouter, routerAbi, provider);
+  const InfraRouterContract = new Contract(infraRouter, routerAbi, wallet);
   const agentAddress = await InfraRouterContract?.getAgentAddress(address);
   const tokenAAddress = reverse == true ? token1 : token0;
   const tokenBAddress = reverse == true ? token0 : token1;
-  const tokenAContract = new Contract(tokenAAddress, erc20Abi, provider);
+  const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
   const tokenADecimals = await tokenAContract.decimals();
+
   // const tokenBContract = new Contract(tokenBAddress, erc20Abi, provider);
   // const tokenBDecimals = await tokenBContract.decimals();
 
+  const gasLimit = 8000000;
+
   let Approvals = [];
   let Calldatas = [];
-
-  console.log("::API:: Checking if Agent Exists");
-
   let adjAmount: any = ethers.BigNumber.from(0);
 
   console.log("Adj Amount: ", Number(amount));
@@ -76,156 +65,49 @@ export async function buildSwap(
   if (tokenADecimals == 0) {
     throw new Error("Invalid Token Decimals");
   }
-
   adjAmount = getAdjAmount(amount, tokenADecimals);
-
-  // adjAmount = ethers.utils.parseUnits(amount, tokenADecimals).toBigInt();
 
   if (adjAmount == 0) {
     throw new Error("Invalid Token Decimals");
   }
 
-  console.log("Adj Amount: ", Number(adjAmount));
-
-  // let PermitData = {
-  //   ROUTER: {},
-  //   BATCHER: {},
-  // };
-
-  // if (permit2) {
-  //   const allowanceProvider = new AllowanceProvider(provider, PERMIT2_ADDRESS);
-
-  //   let { permitAmountRouter, expirationRouter, nonceRouter } =
-  //     (await allowanceProvider.getAllowanceData(
-  //       address,
-  //       tokenAAddress,
-  //       router
-  //     )) as any;
-
-  //   //Check permitAmount and expiration
-  //   console.log("Permit Amount: ", permitAmountRouter);
-  //   console.log("Expiration: ", expirationRouter);
-  //   console.log("Nonce: ", nonceRouter);
-
-  //   if (
-  //     adjAmount > permitAmountRouter ||
-  //     expirationRouter < Math.floor(Date.now() / 1000) ||
-  //     permitAmountRouter == undefined
-  //   ) {
-  //     // const PERMIT_EXPIRATION = `30d`;
-  //     // const PERMIT_SIG_EXPIRATION = `30m`;
-
-  //     function toDeadline(expiration: number): number {
-  //       return Math.floor((Date.now() + expiration) / 1000);
-  //     }
-
-  //     const permitSingle: PermitSingle = {
-  //       details: {
-  //         token: tokenAAddress,
-  //         amount: MaxAllowanceTransferAmount,
-  //         // You may set your own deadline - we use 30 days.
-  //         expiration: toDeadline(/* 30 days= */ 1000 * 60 * 60 * 24 * 30),
-  //         nonce: nonceRouter === undefined ? 1 : nonceRouter,
-  //       },
-  //       spender: router,
-  //       // You may set your own deadline - we use 30 minutes.
-  //       sigDeadline: toDeadline(/* 30 minutes= */ 1000 * 60 * 60 * 30),
-  //     };
-
-  //     console.log("Permit Single: ", permitSingle);
-
-  //     const { domain, types, values } = AllowanceTransfer.getPermitData(
-  //       permitSingle,
-  //       PERMIT2_ADDRESS,
-  //       chainId
-  //     );
-
-  //     PermitData.ROUTER = {
-  //       permitSingle,
-  //       domain,
-  //       types,
-  //       values,
-  //     };
-  //   }
-
-  //   let { permitAmountBatcher, expirationBatcher, nonceBatcher } =
-  //     (await allowanceProvider.getAllowanceData(
-  //       address,
-  //       tokenAAddress,
-  //       batcher
-  //     )) as any;
-
-  //   //Check permitAmount and expiration
-  //   console.log("Permit Amount: ", permitAmountBatcher);
-  //   console.log("Expiration: ", expirationBatcher);
-  //   console.log("Nonce: ", nonceBatcher);
-
-  //   if (
-  //     adjAmount > permitAmountBatcher ||
-  //     expirationBatcher < Math.floor(Date.now() / 1000) ||
-  //     permitAmountBatcher == undefined
-  //   ) {
-  //     // const PERMIT_EXPIRATION = `30d`;
-  //     // const PERMIT_SIG_EXPIRATION = `30m`;
-
-  //     function toDeadline(expiration: number): number {
-  //       return Math.floor((Date.now() + expiration) / 1000);
-  //     }
-
-  //     const permitSingle: PermitSingle = {
-  //       details: {
-  //         token: tokenAAddress,
-  //         amount: MaxAllowanceTransferAmount,
-  //         // You may set your own deadline - we use 30 days.
-  //         expiration: toDeadline(/* 30 days= */ 1000 * 60 * 60 * 24 * 30),
-  //         nonce: nonceBatcher === undefined ? 1 : nonceBatcher,
-  //       },
-  //       spender: String(PROTOCOLS[chainId][protocol].ROUTER),
-  //       // You may set your own deadline - we use 30 minutes.
-  //       sigDeadline: toDeadline(/* 30 minutes= */ 1000 * 60 * 60 * 30),
-  //     };
-
-  //     const { domain, types, values } = AllowanceTransfer.getPermitData(
-  //       permitSingle,
-  //       PERMIT2_ADDRESS,
-  //       chainId
-  //     );
-
-  //     PermitData.BATCHER = {
-  //       permitSingle,
-  //       domain,
-  //       types,
-  //       values,
-  //     };
-  //   }
-  // }
-
-  const quoterContract = new Contract(quoter, quoterAbi, provider);
+  const quoterContract = new Contract(quoter, quoterAbi, wallet);
   const quote = await quotePair(tokenAAddress, tokenBAddress, Number(chainId));
-  const allowanceRouter = await tokenAContract?.allowance(address, router);
   const allowanceAgent = await tokenAContract?.allowance(address, agentAddress);
+  const slippageTolerance = slippage;
+
+  console.log("::API:: Infra Router Address", infraRouter);
+  console.log("::API:: Uni Router Address", uniRouter);
+  console.log("::API:: Agent Address", agentAddress);
+
+  // Allowance for Sender to Router
+  // -------------------
 
   // if (adjAmount > allowanceRouter) {
+  //   console.log("::API:: Sender does not have enough allowance");
   //   const dataApproveToRouter = tokenAContract.interface.encodeFunctionData(
   //     "approve",
-  //     [router, ethers.BigNumber.from(2).pow(256).sub(1)]
+  //     [uniRouter, ethers.BigNumber.from(2).pow(256).sub(1)]
   //   );
   //   const approvalToRouter = {
   //     to: tokenAAddress,
   //     value: 0,
   //     data: dataApproveToRouter,
+  //     gasLimit: gasLimit,
+  //     gasPrice: gas,
   //   };
   //   Approvals.push(approvalToRouter);
   // }
 
-  const gasPrice = await provider.getGasPrice();
-  const gasLimit = 30000000;
+  // Allowance for Sender to Agent
+  // ----------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------
 
   if (allowanceAgent && adjAmount > allowanceAgent) {
     console.log("::API:: Agent does not have enough allowance");
     const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
       "approve",
-      [agentAddress, ethers.constants.MaxUint256]
+      [agentAddress, adjAmount]
     );
 
     const approvalToAgent = {
@@ -233,23 +115,35 @@ export async function buildSwap(
       value: 0,
       data: dataApproveToAgent,
       gasLimit: gasLimit,
-      gasPrice: gasPrice.add(gasPrice.div(2)),
+      gasPrice: await wallet.provider?.getGasPrice(),
     };
 
-    Approvals.push(approvalToAgent);
+    const found = Approvals.find(
+      (element) =>
+        element.data === approvalToAgent.data &&
+        element.to === approvalToAgent.to
+    );
+
+    if (!found) Approvals.push(approvalToAgent);
+  } else {
+    console.log("::API:: Agent has enough allowance for Sender");
   }
 
   const allowanceAgentToRouter = await tokenAContract?.allowance(
     agentAddress,
-    router
+    uniRouter
   );
 
-  if (allowanceAgentToRouter < adjAmount) {
-    console.log("::API:: Agent does not have enough allowance for Router");
+  // Allowance for Agent to Univ3
+  // ----------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------
+
+  if (adjAmount > allowanceAgentToRouter && allowanceAgentToRouter) {
+    console.log("::API:: Agent does not have enough allowance for Uni Router");
     const calldataApproveAgentToRouter =
       tokenAContract.interface.encodeFunctionData("approve", [
-        router,
-        ethers.constants.MaxUint256,
+        uniRouter,
+        adjAmount,
       ]);
 
     const approvalAgentToRouter = {
@@ -257,14 +151,24 @@ export async function buildSwap(
       value: 0,
       data: calldataApproveAgentToRouter,
       gasLimit: gasLimit,
-      gasPrice: gasPrice.add(gasPrice.div(2)),
+      gasPrice: await wallet.provider?.getGasPrice(),
     };
 
-    Calldatas.push(approvalAgentToRouter);
+    const found = Calldatas.find(
+      (element) =>
+        element.data === approvalAgentToRouter.data &&
+        element.to === approvalAgentToRouter.to
+    );
+
+    if (!found) Calldatas.push(approvalAgentToRouter);
+  } else {
+    console.log("::API:: Agent has enough allowance for Uni Router");
   }
 
-  // AGENT CALLS
-  console.log("::API:: Transfering tokens to agent Call");
+  // Transfer tokens from Sender to Agent
+  // ----------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------
+  console.log("::API:: Transfering tokens from sender to agent CallData");
   const dataTransferFromSenderToAgent =
     tokenAContract.interface.encodeFunctionData("transferFrom", [
       address!,
@@ -277,16 +181,22 @@ export async function buildSwap(
     value: 0,
     data: dataTransferFromSenderToAgent,
     gasLimit: gasLimit,
-    gasPrice: gasPrice.add(gasPrice.div(2)),
+    gasPrice: await wallet.provider?.getGasPrice(),
   };
 
-  Calldatas.push(transferFromSenderToAgent);
+  const found = Calldatas.find(
+    (element) =>
+      element.data === dataTransferFromSenderToAgent &&
+      element.to === tokenAAddress
+  );
 
-  console.log("::API:: Checking if Agent has enough allowance for Router");
+  if (!found) Calldatas.push(transferFromSenderToAgent);
 
-  //check allowance Agent to Router
+  // Encode Swap tx to Uni Router
+  // ----------------------------------------------------------------------------
+  // ----------------------------------------------------------------------------
 
-  const slippageTolerance = slippage;
+  console.log("::API:: Encode Swap CallData To Uni Router");
 
   if (!quote) {
     console.error("❌ USDC Pool Not Found");
@@ -298,6 +208,7 @@ export async function buildSwap(
       adjAmount,
       slippageTolerance
     );
+
     const poolFee2 = await findPoolAndFee(
       quoterContract,
       NATIVETOKENS[chainId].WRAPPED,
@@ -307,24 +218,6 @@ export async function buildSwap(
     );
 
     let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-
-    // let minimumAmountB = await getAmountOut(
-    //   tokenAAddress,
-    //   NATIVETOKENS[chainId].WRAPPED,
-    //   poolFee,
-    //   adjAmount,
-    //   quoterContract,
-    //   50
-    // );
-
-    //  let minimumAmountB2 = await getAmountOut(
-    //   NATIVETOKENS[chainId].WRAPPED,
-    //   USDC[chainId],
-    //   poolFee2,
-    //   minimumAmountB,
-    //   quoterContract,
-    //   50
-    // );
 
     const path = ethers.utils.solidityPack(
       ["address", "uint24", "address", "uint24", "address"],
@@ -340,6 +233,7 @@ export async function buildSwap(
     let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
 
     console.log("::API:: Building Swap tx");
+
     const calldataSwapAgentToRouter =
       swapRouterContract.interface.encodeFunctionData("exactInput", [
         swapTxInputs,
@@ -349,8 +243,6 @@ export async function buildSwap(
       to: PROTOCOLS[chainId][protocol].ROUTER as string,
       value: 0,
       data: calldataSwapAgentToRouter,
-      gasLimit: gasLimit,
-      gasPrice: gasPrice.add(gasPrice.div(2)),
     };
 
     Calldatas.push(swapMultiAgentToRouter);
@@ -392,23 +284,24 @@ export async function buildSwap(
       swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
         swapTxInputs,
       ]);
+
     const swapAgentToRouter = {
-      to: PROTOCOLS[chainId][protocol].ROUTER as string,
+      to: uniRouter,
       value: 0,
       data: calldataSwapAgentToRouter,
       gasLimit: gasLimit,
-      gasPrice: gasPrice.add(gasPrice.div(2)),
+      gasPrice: await wallet.provider?.getGasPrice(),
     };
 
-    Calldatas.push(swapAgentToRouter);
+    const found = Calldatas.find(
+      (element) =>
+        element.data === calldataSwapAgentToRouter && element.to === uniRouter
+    );
+
+    if (!found) Calldatas.push(swapAgentToRouter);
   }
 
-  console.log("::API:: Push Tokens Return");
   const TokensReturn = [tokenBAddress];
-
-  console.log("::API:: Approvals", Approvals);
-  console.log("::API:: Calldatas", Calldatas);
-  console.log("::API:: TokensReturn", TokensReturn);
 
   return {
     Approvals,
@@ -419,6 +312,7 @@ export async function buildSwap(
 
 export async function buildBatchSwap(
   swaps: Array<{
+    wallet: Wallet;
     address: string;
     token0: string;
     token1: string;
@@ -430,67 +324,123 @@ export async function buildBatchSwap(
   }>
 ) {
   console.log("Building Batch Swap tx");
-
   const provider = new ethers.providers.JsonRpcProvider(
     NETWORKS[swaps[0].chainId]
   );
+  const wallet = swaps[0].wallet;
+  const protocol = PROTOCOLS[swaps[0].chainId][swaps[0].protocol];
   const infraRouter = String(INFRA[swaps[0].chainId].ROUTER);
-  const InfraRouterContract = new Contract(infraRouter, routerAbi, provider);
-  const router = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].ROUTER);
-  const swapRouterContract = new Contract(router, swapRouterAbi, provider);
+  const InfraRouterContract = new Contract(infraRouter, routerAbi, wallet);
+  const uniRouter = String(protocol.ROUTER);
+  const swapRouterContract = new Contract(uniRouter, swapRouterAbi, wallet);
+  const quoter = String(protocol.QUOTER);
+  const quoterContract = new Contract(quoter, quoterAbi, wallet);
+  const gasLimit = 8000000;
 
-  const quoter = String(PROTOCOLS[swaps[0].chainId][swaps[0].protocol].QUOTER);
-  const quoterContract = new Contract(quoter, quoterAbi, provider);
-
-  let Approvals: any = [];
+  let Approvals = [];
   let Calldatas = [];
   let TokensReturn = [];
+
+  console.log("::API:: Infra Router Address", infraRouter);
+  console.log("::API:: Uni Router Address", uniRouter);
 
   for (let swap of swaps) {
     const agentAddress = await InfraRouterContract?.getAgentAddress(
       swap.address
     );
-
+    console.log("::API:: Agent Address", agentAddress);
     const tokenAAddress = swap.reverse ? swap.token1 : swap.token0;
     const tokenBAddress = swap.reverse ? swap.token0 : swap.token1;
-
-    const tokenAContract = new Contract(tokenAAddress, erc20Abi, provider);
+    const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
 
     const allowanceAgent = await tokenAContract?.allowance(
       swap.address,
       agentAddress
     );
 
+    const tokenADecimals = await tokenAContract?.decimals();
     let adjAmount: any = ethers.BigNumber.from(0);
 
-    const tokenADecimals = await tokenAContract.decimals();
-
-    adjAmount = ethers.utils
-      .parseUnits(swap.amount.toString(), tokenADecimals)
-      .toBigInt();
+    adjAmount = getAdjAmount(swap.amount, tokenADecimals);
 
     if (adjAmount == 0) {
       throw new Error("Invalid Token Decimals");
     }
 
-    if (adjAmount > allowanceAgent) {
-      const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
+    // Allowance for Agent to Sender
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    if (Number(adjAmount) > Number(allowanceAgent)) {
+      console.log("::API:: Agent does not have enough allowance");
+      const dataApproveToAgent = tokenAContract?.interface.encodeFunctionData(
         "approve",
-        [agentAddress, ethers.BigNumber.from(2).pow(256).sub(1)]
+        [agentAddress, ethers.constants.MaxUint256]
       );
 
-      const approvalToAgent: { to: string; value: number; data: string } = {
+      const approvalToAgent = {
         to: tokenAAddress,
         value: 0,
         data: dataApproveToAgent,
+        gasLimit: gasLimit,
+        gasPrice: await wallet.provider?.getGasPrice(),
       };
 
+      // check if dataApproveToAgent e to sono in approvals
+      const found = Approvals.find(
+        (element) =>
+          element.data === approvalToAgent.data &&
+          element.to === approvalToAgent.to
+      );
+
       Approvals.push(approvalToAgent);
+    } else {
+      console.log("::API:: Agent has enough allowance for Sender");
     }
+
+    // Check allowance Router to UniRouter
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    const allowanceAgentToUniRouter = await tokenAContract?.allowance(
+      agentAddress,
+      uniRouter
+    );
+
+    if (
+      Number(adjAmount) > Number(allowanceAgentToUniRouter) &&
+      allowanceAgentToUniRouter
+    ) {
+      console.log(
+        "::API:: Agent does not have enough allowance for Uni Router"
+      );
+
+      const calldataApproveAgentToRouter =
+        tokenAContract.interface.encodeFunctionData("approve", [
+          uniRouter,
+          ethers.constants.MaxUint256,
+        ]);
+
+      const approvalAgentToRouter = {
+        to: tokenAAddress,
+        value: 0,
+        data: calldataApproveAgentToRouter,
+        gasLimit: gasLimit,
+        gasPrice: await wallet.provider?.getGasPrice(),
+      };
+
+      Calldatas.push(approvalAgentToRouter);
+    } else {
+      console.log("::API:: Agent has enough allowance for Uni Router");
+    }
+
+    // Transfer tokens from Sender to Agent
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
 
     const dataTransferFromSenderToAgent =
       tokenAContract.interface.encodeFunctionData("transferFrom", [
-        swap.address!,
+        swap.address,
         agentAddress,
         adjAmount,
       ]);
@@ -499,38 +449,23 @@ export async function buildBatchSwap(
       to: tokenAAddress,
       value: 0,
       data: dataTransferFromSenderToAgent,
+      gasLimit: gasLimit,
+      gasPrice: await wallet.provider?.getGasPrice(),
     };
 
     Calldatas.push(transferFromSenderToAgent);
 
-    // Check allowance Router to UniRouter
-    const allowanceAgentToUniRouter = await tokenAContract?.allowance(
-      agentAddress,
-      router
-    );
-
-    if (allowanceAgentToUniRouter < adjAmount) {
-      const calldataApproveAgentToRouter =
-        tokenAContract.interface.encodeFunctionData("approve", [
-          router,
-          ethers.BigNumber.from(2).pow(256).sub(1),
-        ]);
-
-      const approvalAgentToRouter = {
-        to: tokenAAddress,
-        value: 0,
-        data: calldataApproveAgentToRouter,
-      };
-
-      Calldatas.push(approvalAgentToRouter);
-    }
+    // Encode Swap tx to Uni Router
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
 
     const quote = await quotePair(
       tokenAAddress,
       tokenBAddress,
       Number(swap.chainId)
     );
-    const slippageTolerance = 100;
+
+    const slippageTolerance = swap.slippage;
 
     if (!quote) {
       console.error("❌ USDC Pool Not Found");
@@ -554,24 +489,6 @@ export async function buildBatchSwap(
 
       let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
 
-      // let minimumAmountB = await getAmountOut(
-      //   tokenAAddress,
-      //   NATIVETOKENS[chainId].WRAPPED,
-      //   poolFee,
-      //   adjAmount,
-      //   quoterContract,
-      //   50
-      // );
-
-      //  let minimumAmountB2 = await getAmountOut(
-      //   NATIVETOKENS[chainId].WRAPPED,
-      //   USDC[chainId],
-      //   poolFee2,
-      //   minimumAmountB,
-      //   quoterContract,
-      //   50
-      // );
-
       const path = ethers.utils.solidityPack(
         ["address", "uint24", "address", "uint24", "address"],
         [
@@ -591,30 +508,26 @@ export async function buildBatchSwap(
         ]);
 
       const swapMultiAgentToRouter = {
-        to: PROTOCOLS[swap.chainId][swap.protocol].ROUTER as string,
+        to: uniRouter,
         value: 0,
         data: calldataSwapAgentToRouter,
+        gasLimit: gasLimit,
+        gasPrice: await wallet.provider?.getGasPrice(),
       };
 
+      const found = Calldatas.find(
+        (element) =>
+          element.data === calldataSwapAgentToRouter && element.to === uniRouter
+      );
+
       Calldatas.push(swapMultiAgentToRouter);
+
       TokensReturn.push(tokenBAddress);
     } else {
       const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
       const quoterAddress = quoter;
       const quoterContract = new Contract(quoterAddress, quoterAbi, provider);
-      const slippageTolerance = 100;
-      const expectedAmountB: BigNumber =
-        await quoterContract?.callStatic?.quoteExactInputSingle?.(
-          tokenAAddress,
-          tokenBAddress,
-          3000,
-          adjAmount,
-          0
-        );
-
-      const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
-        .mul(10000 - slippageTolerance)
-        .div(10000);
+      const slippageTolerance = swap.slippage;
 
       const poolFee = await findPoolAndFee(
         quoterContract,
@@ -623,6 +536,19 @@ export async function buildBatchSwap(
         adjAmount,
         slippageTolerance
       );
+
+      const expectedAmountB: BigNumber =
+        await quoterContract?.callStatic?.quoteExactInputSingle?.(
+          tokenAAddress,
+          tokenBAddress,
+          poolFee,
+          adjAmount,
+          0
+        );
+
+      const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
+        .mul(10000 - slippageTolerance)
+        .div(10000);
 
       const swapTxInputs = [
         tokenAAddress,
@@ -641,15 +567,29 @@ export async function buildBatchSwap(
         ]);
 
       const swapAgentToRouter = {
-        to: router as string,
+        to: uniRouter,
         value: 0,
         data: calldataSwapAgentToRouter,
+        gasLimit: gasLimit,
+        gasPrice: await wallet.provider?.getGasPrice(),
       };
 
-      Calldatas.push(swapAgentToRouter);
+      const found = Calldatas.find(
+        (element) =>
+          element.data === calldataSwapAgentToRouter && element.to === uniRouter
+      );
+
+      if (!found) {
+        console.log("::API:: Adding Swap Agent to Router");
+        Calldatas.push(swapAgentToRouter);
+      }
       TokensReturn.push(tokenBAddress);
     }
   }
+
+  console.log("::API:: Approvals", Approvals.length);
+  console.log("::API:: Calldatas", Calldatas.length);
+  console.log("::API:: TokensReturn", TokensReturn.length);
 
   return {
     Approvals,

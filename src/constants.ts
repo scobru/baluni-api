@@ -10,7 +10,7 @@ export const BASEURL = "https://baluni-api.scobrudot.dev";
 
 export const INFRA: InfraConfig = {
   "137": {
-    ROUTER: "0xbce92137174e4c093591ea1029e224f97e17344b",
+    ROUTER: "0x19F330eBa98FFd47A01F8f2afB0b9863a24497dD",
   },
 };
 
@@ -46,5 +46,5 @@ export const USDC: NetworkConfig = {
 
 export const NETWORKS: NetworkConfig = {
   "137":
-    "https://polygon-mainnet.g.alchemy.com/v2/nPBTC9lNonD1KsZGmuXSRGfVh6O63x2_",
+    "https://dimensional-floral-lambo.matic.quiknode.pro/a88e447e38026a8fefcd885d500e28229dd116ca/",
 };

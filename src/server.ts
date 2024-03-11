@@ -3,6 +3,7 @@ import express from "express";
 import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 
 import { buildSwap } from "./uni-v3/swap-tokens";
+import { ethers } from "ethers";
 
 const app = express();
 const port = 3001;
@@ -382,7 +383,13 @@ app.post(
         Number(chainId)
       );
 
+      const wallet = new ethers.Wallet(
+        process.env.PRIVATE_KEY,
+        new ethers.providers.JsonRpcProvider(NETWORKS[chainId])
+      );
+
       const swapResult = await buildSwap(
+        wallet,
         address,
         tokenAAddress!,
         tokenBAddress!,

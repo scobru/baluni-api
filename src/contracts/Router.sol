@@ -1,5 +1,3 @@
-// Optimized version of the Router contract with gas-saving improvements
-
 pragma solidity ^0.8.0;
 
 import "./Agent.sol";
@@ -10,15 +8,21 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract Router is Ownable {
     using SafeERC20 for IERC20;
 
-    mapping(address => Agent) public userAgents;
+    struct Call {
+        address to;
+        uint256 value;
+        bytes data;
+    }
 
-    event AgentCreated(address user, address agent);
+    mapping(address => Agent) public userAgents;
 
     constructor() Ownable(msg.sender) {}
 
+    event AgentCreated(address user, address agent);
+
     function getOrCreateAgent(address user) private returns (Agent) {
+        bytes32 salt = keccak256(abi.encodePacked(user));
         if (address(userAgents[user]) == address(0)) {
-            bytes32 salt = keccak256(abi.encodePacked(user));
             Agent agent = new Agent{salt: salt}(user, address(this));
             userAgents[user] = agent;
             emit AgentCreated(user, address(agent));
@@ -36,7 +40,7 @@ contract Router is Ownable {
 
     function getAgentAddress(address _user) public view returns (address) {
         bytes32 salt = keccak256(abi.encodePacked(_user));
-        bytes memory bytecode = type(Agent).creationCode;
+        bytes memory bytecode = getBytecode(_user);
         bytes32 hash = keccak256(
             abi.encodePacked(
                 bytes1(0xff),
@@ -46,6 +50,12 @@ contract Router is Ownable {
             )
         );
         return address(uint160(uint(hash)));
+    }
+
+    // get the ByteCode of the contract DeployWithCreate2
+    function getBytecode(address _owner) public view returns (bytes memory) {
+        bytes memory bytecode = type(Agent).creationCode;
+        return abi.encodePacked(bytecode, abi.encode(_owner, address(this)));
     }
 
     function withdraw() external onlyOwner {
