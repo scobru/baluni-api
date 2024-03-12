@@ -4,7 +4,7 @@ import {
   depositToYearn,
   depositToYearnBatched,
   redeemFromYearn,
-  redeemFromYearnBatched
+  redeemFromYearnBatched,
   accuredYearnInterest,
   previewWithdraw,
   getVaultAsset,
