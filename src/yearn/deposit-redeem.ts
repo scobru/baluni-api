@@ -169,7 +169,7 @@ export async function depositToYearnBatched(
     chainId: string;
   }>
 ): Promise<{
-  Approvals: Array<any>;
+  Approvals: Array<any>; // Specify the type argument for the Array type
   Calldatas: Array<any>;
   TokensReturn: Array<string>;
 }> {
@@ -355,6 +355,7 @@ export async function redeemFromYearn(
     let Approvals = [];
     let Calldatas = [];
     let TokensReturn = [];
+
     const allowanceAgent = await vault?.allowance(receiver, agentAddress);
 
     // Allowance for Agent
@@ -363,7 +364,7 @@ export async function redeemFromYearn(
       console.log("::API:: Approving agent address");
       const approveData = vault.interface.encodeFunctionData("approve", [
         agentAddress,
-        ethers.BigNumber.from(2).pow(256).sub(1),
+        ethers.constants.MaxUint256,
       ]);
 
       const approvalCalldata = {
@@ -374,13 +375,7 @@ export async function redeemFromYearn(
         gasPrice: await provider.getGasPrice(),
       };
 
-      const found = Approvals.find(
-        (item) => item.to === vault.address && item.data === approveData
-      );
-
-      if (!found) {
-        Approvals.push(approvalCalldata);
-      }
+      Approvals.push(approvalCalldata);
     } else {
       console.log("::API:: No need to approve agent address");
     }
@@ -392,7 +387,7 @@ export async function redeemFromYearn(
     if (allowanceAgentYearn.lt(amount)) {
       const approveData = vault.interface.encodeFunctionData("approve", [
         pool,
-        ethers.BigNumber.from(2).pow(256).sub(1),
+        ethers.constants.MaxUint256,
       ]);
 
       const approvalCalldata = {
@@ -403,13 +398,7 @@ export async function redeemFromYearn(
         gasPrice: await provider.getGasPrice(),
       };
 
-      const found = Approvals.find(
-        (item) => item.to === vault.address && item.data === approveData
-      );
-
-      if (!found) {
-        Calldatas.push(approvalCalldata);
-      }
+      Calldatas.push(approvalCalldata);
     } else {
       console.log("::API:: No need to approve Yearn Vault");
     }
@@ -429,13 +418,7 @@ export async function redeemFromYearn(
       gasPrice: await provider.getGasPrice(),
     };
 
-    const found = Calldatas.find(
-      (item) => item.to === vault.address && item.data === transferFromData
-    );
-
-    if (!found) {
-      Calldatas.push(transferFromCalldata);
-    }
+    Calldatas.push(transferFromCalldata);
 
     // Redeem
     // -------------------------------------------------------------------------
@@ -520,7 +503,6 @@ export async function redeemFromYearnBatched(
       wallet
     );
     const agentAddress = await InfraRouterContract?.getAgentAddress(receiver);
-
     const allowanceAgent = await vault?.allowance(receiver, agentAddress);
 
     // Allowance for Agent
@@ -529,7 +511,7 @@ export async function redeemFromYearnBatched(
       console.log("::API:: Approving agent address");
       const approveData = vault.interface.encodeFunctionData("approve", [
         agentAddress,
-        ethers.BigNumber.from(2).pow(256).sub(1),
+        ethers.constants.MaxUint256,
       ]);
 
       const approvalCalldata = {
@@ -540,13 +522,7 @@ export async function redeemFromYearnBatched(
         gasPrice: await provider.getGasPrice(),
       };
 
-      const found = Approvals.find(
-        (item) => item.to === vault.address && item.data === approveData
-      );
-
-      if (!found) {
-        Approvals.push(approvalCalldata);
-      }
+      Approvals.push(approvalCalldata);
     } else {
       console.log("::API:: No need to approve agent address");
     }
@@ -558,7 +534,7 @@ export async function redeemFromYearnBatched(
     if (allowanceAgentYearn.lt(amount)) {
       const approveData = vault.interface.encodeFunctionData("approve", [
         pool,
-        ethers.BigNumber.from(2).pow(256).sub(1),
+        ethers.constants.MaxUint256,
       ]);
 
       const approvalCalldata = {
@@ -569,13 +545,7 @@ export async function redeemFromYearnBatched(
         gasPrice: await provider.getGasPrice(),
       };
 
-      const found = Approvals.find(
-        (item) => item.to === vault.address && item.data === approveData
-      );
-
-      if (!found) {
-        Calldatas.push(approvalCalldata);
-      }
+      Calldatas.push(approvalCalldata);
     } else {
       console.log("::API:: No need to approve Yearn Vault");
     }
@@ -595,13 +565,7 @@ export async function redeemFromYearnBatched(
       gasPrice: await provider.getGasPrice(),
     };
 
-    const found = Calldatas.find(
-      (item) => item.to === vault.address && item.data === transferFromData
-    );
-
-    if (!found) {
-      Calldatas.push(transferFromCalldata);
-    }
+    Calldatas.push(transferFromCalldata);
 
     // Redeem
     // -------------------------------------------------------------------------
@@ -618,11 +582,7 @@ export async function redeemFromYearnBatched(
       gasPrice: await provider.getGasPrice(),
     };
 
-    const foundRedeem = Calldatas.find(
-      (item) => item.to === pool && item.data === redeemData
-    );
-
-    if (!foundRedeem) Calldatas.push(redeemCalldata);
+    Calldatas.push(redeemCalldata);
 
     const asset = await vault.asset();
     TokensReturn.push(asset);

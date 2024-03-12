@@ -10,6 +10,20 @@ import {
   getVaultAsset,
 } from "./yearn/deposit-redeem";
 
+// import Router.json
+import Router from "./abis/infra/Router.json";
+import Agent from "./abis/infra/Agent.json";
+
+export {
+  INFRA,
+  PROTOCOLS,
+  ORACLE,
+  NATIVETOKENS,
+  NETWORKS,
+  BASEURL,
+} from "./constants";
+
+export { Router, Agent };
 export { buildSwap, buildBatchSwap };
 export {
   depositToYearn,
@@ -59,12 +73,3 @@ export function getNativeTokenAddress(
 export function getNetworkRPC(chainId: string): string | undefined {
   return NETWORKS[chainId];
 }
-
-export {
-  INFRA,
-  PROTOCOLS,
-  ORACLE,
-  NATIVETOKENS,
-  NETWORKS,
-  BASEURL,
-} from "./constants";
