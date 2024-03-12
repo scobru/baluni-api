@@ -27,7 +27,9 @@ export async function depositToYearn(
       wallet
     );
     const agentAddress = await InfraRouterContract?.getAgentAddress(receiver);
-    const gasLimit = 8000000;
+    const gasLimit = 9000000;
+    const gasPrice = await provider?.getGasPrice();
+    const gas = gasPrice.add(gasPrice.div(10));
 
     if (tokenBalance.lt(amount)) {
       throw new Error("::API:: Insufficient balance");
@@ -58,8 +60,8 @@ export async function depositToYearn(
         to: token.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       const found = Approvals.find(
@@ -88,8 +90,8 @@ export async function depositToYearn(
         to: token.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       const found = Approvals.find(
@@ -115,8 +117,8 @@ export async function depositToYearn(
       to: token.address,
       value: 0,
       data: transferFromData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     const found = Calldatas.find(
@@ -138,8 +140,8 @@ export async function depositToYearn(
       to: pool,
       value: 0,
       data: depositData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     Calldatas.push(depositCalldata);
@@ -197,7 +199,9 @@ export async function depositToYearnBatched(
       wallet
     );
     const agentAddress = await InfraRouterContract?.getAgentAddress(receiver);
-    const gasLimit = 8000000;
+    const gasLimit = 9000000;
+    const gasPrice = await provider?.getGasPrice();
+    const gas = gasPrice.add(gasPrice.div(10));
 
     if (tokenBalance.lt(amount)) {
       throw new Error("::API:: Insufficient balance");
@@ -224,8 +228,8 @@ export async function depositToYearnBatched(
         to: token.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       const found = Approvals.find(
@@ -254,8 +258,8 @@ export async function depositToYearnBatched(
         to: token.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       const found = Approvals.find(
@@ -281,8 +285,8 @@ export async function depositToYearnBatched(
       to: token.address,
       value: 0,
       data: transferFromData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     const found = Calldatas.find(
@@ -304,8 +308,8 @@ export async function depositToYearnBatched(
       to: pool,
       value: 0,
       data: depositData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     Calldatas.push(depositCalldata);
@@ -338,7 +342,9 @@ export async function redeemFromYearn(
       wallet
     );
     const vaultBalance = await vault.balanceOf(receiver);
-    const gasLimit = 8000000;
+    const gasLimit = 9000000;
+    const gasPrice = await provider?.getGasPrice();
+    const gas = gasPrice.add(gasPrice.div(10));
 
     if (vaultBalance.lt(amount)) {
       throw new Error("::API:: Insufficient balance");
@@ -371,8 +377,8 @@ export async function redeemFromYearn(
         to: vault.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       Approvals.push(approvalCalldata);
@@ -394,8 +400,8 @@ export async function redeemFromYearn(
         to: vault.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       Calldatas.push(approvalCalldata);
@@ -414,8 +420,8 @@ export async function redeemFromYearn(
       to: vault.address,
       value: 0,
       data: transferFromData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     Calldatas.push(transferFromCalldata);
@@ -431,8 +437,8 @@ export async function redeemFromYearn(
       to: pool,
       value: 0,
       data: redeemData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     const foundRedeem = Calldatas.find(
@@ -490,7 +496,9 @@ export async function redeemFromYearnBatched(
       wallet
     );
     const vaultBalance = await vault.balanceOf(receiver);
-    const gasLimit = 8000000;
+    const gasLimit = 9000000;
+    const gasPrice = await provider?.getGasPrice();
+    const gas = gasPrice.add(gasPrice.div(10));
 
     if (vaultBalance.lt(amount)) {
       throw new Error("::API:: Insufficient balance");
@@ -518,8 +526,8 @@ export async function redeemFromYearnBatched(
         to: vault.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       Approvals.push(approvalCalldata);
@@ -541,8 +549,8 @@ export async function redeemFromYearnBatched(
         to: vault.address,
         value: 0,
         data: approveData,
-        gasLimit: gasLimit,
-        gasPrice: await provider.getGasPrice(),
+        // gasLimit: gasLimit,
+        // gasPrice: gas,
       };
 
       Calldatas.push(approvalCalldata);
@@ -552,6 +560,8 @@ export async function redeemFromYearnBatched(
 
     // Transfer From
     // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+
     const transferFromData = vault.interface.encodeFunctionData(
       "transferFrom",
       [receiver, agentAddress, amount]
@@ -561,14 +571,16 @@ export async function redeemFromYearnBatched(
       to: vault.address,
       value: 0,
       data: transferFromData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     Calldatas.push(transferFromCalldata);
 
     // Redeem
     // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+
     const redeemData = vault.interface.encodeFunctionData(
       "redeem(uint256,address,address,uint256)",
       [amount, agentAddress, agentAddress, BigNumber.from(200)]
@@ -578,8 +590,8 @@ export async function redeemFromYearnBatched(
       to: pool,
       value: 0,
       data: redeemData,
-      gasLimit: gasLimit,
-      gasPrice: await provider.getGasPrice(),
+      // gasLimit: gasLimit,
+      // gasPrice: gas,
     };
 
     Calldatas.push(redeemCalldata);
