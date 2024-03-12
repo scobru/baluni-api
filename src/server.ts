@@ -3,7 +3,8 @@ import express from "express";
 import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 
 import { buildSwap } from "./uni-v3/swap-tokens";
-import { ethers } from "ethers";
+import { BigNumber, ethers } from "ethers";
+import { depositToYearn, redeemFromYearn } from "./yearn/deposit-redeem";
 
 const app = express();
 const port = 3001;
@@ -411,6 +412,141 @@ app.post(
     } catch (error) {
       console.error("Error during swap operation:", error);
       res.status(500).json({ error: "Error during swap operation" });
+    }
+  }
+);
+
+app.post(
+  "/depositToYearn/:tokenSymbol/:strategy/:boosted/:amount/:receiver/:chainId",
+  async (req, res) => {
+    try {
+      const { tokenSymbol, strategy, amount, receiver, chainId, boosted } =
+        req.params;
+
+      // Ora `config` è del tipo corretto
+      const filteredVaults = await fetchYearnVaultsData(Number(chainId));
+
+      filteredVaults
+        .filter((vault) => {
+          const matchesSymbol =
+            vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
+          const isVersion3 =
+            vault.version?.startsWith("3.0") ||
+            vault.name.includes("3.0") ||
+            vault.symbol.includes("3.0");
+          let matchesStrategyType = true;
+          let matchesBoosted = true;
+
+          if (strategy === "multi") {
+            matchesStrategyType = vault.kind === "Multi Strategy";
+          } else if (strategy === "single") {
+            matchesStrategyType = vault.kind !== "Multi Strategy";
+          }
+
+          // Check if boosted filter is applied
+          if (boosted === "true") {
+            matchesBoosted = vault.boosted === true;
+          }
+
+          return (
+            matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
+          );
+        })
+        .map((vault) => vault.address);
+
+      const vaultAddress = filteredVaults[0];
+      const tokenAddress = await fetchTokenAddressByName(
+        tokenSymbol,
+        Number(chainId)
+      );
+
+      // Convert the wallet from JSON to an ethers.Wallet instance
+      const walletInstance = new ethers.Wallet(
+        process.env.PRIVATE_KEY,
+        new ethers.providers.JsonRpcProvider(NETWORKS[chainId])
+      );
+
+      // Convert the amount from string to BigNumber
+      const amountInstance = BigNumber.from(amount);
+
+      const result = await depositToYearn(
+        walletInstance,
+        tokenAddress,
+        vaultAddress.address,
+        amountInstance,
+        receiver,
+        chainId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.toString() });
+    }
+  }
+);
+
+app.post(
+  "/redeemFromYearn/:tokenSymbol/:strategy/:boosted/:amount/:receiver/:chainId",
+  async (req, res) => {
+    try {
+      const { tokenSymbol, strategy, amount, receiver, chainId, boosted } =
+        req.params;
+
+      // Convert the amount from string to BigNumber
+      const amountInstance = BigNumber.from(amount);
+
+      // Ora `config` è del tipo corretto
+      const filteredVaults = await fetchYearnVaultsData(Number(chainId));
+
+      filteredVaults
+        .filter((vault) => {
+          const matchesSymbol =
+            vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
+          const isVersion3 =
+            vault.version?.startsWith("3.0") ||
+            vault.name.includes("3.0") ||
+            vault.symbol.includes("3.0");
+          let matchesStrategyType = true;
+          let matchesBoosted = true;
+
+          if (strategy === "multi") {
+            matchesStrategyType = vault.kind === "Multi Strategy";
+          } else if (strategy === "single") {
+            matchesStrategyType = vault.kind !== "Multi Strategy";
+          }
+
+          // Check if boosted filter is applied
+          if (boosted === "true") {
+            matchesBoosted = vault.boosted === true;
+          }
+
+          return (
+            matchesSymbol && isVersion3 && matchesStrategyType && matchesBoosted
+          );
+        })
+        .map((vault) => vault.address);
+
+      const vaultAddress = filteredVaults[0];
+
+      // Convert the wallet from JSON to an ethers.Wallet instance
+      const walletInstance = new ethers.Wallet(
+        process.env.PRIVATE_KEY,
+        new ethers.providers.JsonRpcProvider(NETWORKS[chainId])
+      );
+
+      const result = await redeemFromYearn(
+        walletInstance,
+        vaultAddress.address,
+        amountInstance,
+        receiver,
+        chainId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: error.toString() });
     }
   }
 );
