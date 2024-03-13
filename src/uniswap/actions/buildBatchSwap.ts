@@ -1,12 +1,12 @@
 import { BigNumberish, Contract, Wallet, ethers, providers } from "ethers";
-import erc20Abi from "../abis/common/ERC20.json";
-import swapRouterAbi from "../abis/uniswap/SwapRouter.json";
-import routerAbi from "../abis/infra/Router.json";
-import quoterAbi from "../abis/uniswap/Quoter.json";
-import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS, USDC } from "../constants";
+import erc20Abi from "../../abis/common/ERC20.json";
+import swapRouterAbi from "../../abis/uniswap/SwapRouter.json";
+import routerAbi from "../../abis/infra/Router.json";
+import quoterAbi from "../../abis/uniswap/Quoter.json";
+import { PROTOCOLS, NETWORKS, INFRA, NATIVETOKENS } from "../../constants";
 import { BigNumber } from "bignumber.js";
-import { findPoolAndFee } from "./utils/getPoolFee";
-import { quotePair } from "./utils/quote";
+import { findPoolAndFee } from "../helpers/getPoolFee";
+import { quotePair } from "../helpers/quote";
 import env from "dotenv";
 import { parseUnits } from "ethers/lib/utils";
 
@@ -59,14 +59,14 @@ export async function buildBatchSwap(
   let Calldatas = [];
   let TokensReturn = [];
 
-  console.log("::API:: Infra Router Address", infraRouter);
-  console.log("::API:: Uni Router Address", uniRouter);
+  console.log("::API::UNISWAP::BUILDSWAP:BATCHED ROUTER", infraRouter);
+  console.log("::API::UNISWAP::BUILDSWAP:BATCHED UNIROUTER", uniRouter);
 
   for (let swap of swaps) {
     const agentAddress = await InfraRouterContract?.getAgentAddress(
       swap.address
     );
-    console.log("::API:: Agent Address", agentAddress);
+    console.log("::API::UNISWAP::BUILDSWAP:BATCHED AGENT", agentAddress);
     const tokenAAddress = swap.reverse ? swap.token1 : swap.token0;
     const tokenBAddress = swap.reverse ? swap.token0 : swap.token1;
     const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
@@ -79,14 +79,20 @@ export async function buildBatchSwap(
     const tokenADecimals = await tokenAContract.decimals();
     let adjAmount: any = ethers.BigNumber.from(0);
 
-    console.log("Swap Amount:", String(swap.amount));
+    console.log(
+      "::API::UNISWAP::BUILDSWAP:BATCHED AMOUNT:",
+      String(swap.amount)
+    );
 
     adjAmount = getAdjAmount(swap.amount, tokenADecimals);
 
-    console.log("Adj Amount:", String(adjAmount));
+    console.log(
+      "::API::UNISWAP::BUILDSWAP:BATCHED ADJ_AMOUNT:",
+      String(adjAmount)
+    );
 
     if (adjAmount == 0) {
-      throw new Error("Invalid Token Decimals");
+      throw new Error("INVALID_TOKEN_DECIMALS");
     }
 
     // Allowance for Agent to Sender
@@ -94,7 +100,9 @@ export async function buildBatchSwap(
     // ----------------------------------------------------------------------------
 
     if (adjAmount.gt(allowanceAgent)) {
-      console.log("::API:: Agent does not have enough allowance");
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_SENDER"
+      );
       const dataApproveToAgent = tokenAContract?.interface.encodeFunctionData(
         "approve",
         [agentAddress, ethers.constants.MaxUint256]
@@ -108,7 +116,9 @@ export async function buildBatchSwap(
 
       Approvals.push(approvalToAgent);
     } else {
-      console.log("::API:: Agent has enough allowance for Sender");
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED FOUND_ALLOWANCE_AGENT_TO_SENDER"
+      );
     }
 
     // Check allowance Router to UniRouter
@@ -122,7 +132,7 @@ export async function buildBatchSwap(
 
     if (adjAmount.gt(allowanceAgentToUniRouter)) {
       console.log(
-        "::API:: Agent does not have enough allowance for Uni Router"
+        "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_UNIROUTER"
       );
 
       const calldataApproveAgentToRouter =
@@ -139,7 +149,9 @@ export async function buildBatchSwap(
 
       Calldatas.push(approvalAgentToRouter);
     } else {
-      console.log("::API:: Agent has enough allowance for Uni Router");
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED FOUND_ALLOWANCE_AGENT_TO_UNIROUTER"
+      );
     }
 
     // Transfer tokens from Sender to Agent
@@ -158,6 +170,11 @@ export async function buildBatchSwap(
       value: 0,
       data: dataTransferFromSenderToAgent,
     };
+
+    if (transferFromSenderToAgent)
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_TRANSFER_FROM_SENDER_TO_AGENT"
+      );
 
     Calldatas.push(transferFromSenderToAgent);
 
@@ -228,6 +245,11 @@ export async function buildBatchSwap(
         data: calldataSwapAgentToRouter,
       };
 
+      if (swapMultiAgentToRouter)
+        console.log(
+          "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+        );
+
       Calldatas.push(swapMultiAgentToRouter);
       TokensReturn.push(tokenBAddress);
     } else {
@@ -264,7 +286,7 @@ export async function buildBatchSwap(
         agentAddress!,
         swapDeadline,
         adjAmount,
-        minimumAmountB,
+        0,
         0,
       ];
 
@@ -279,14 +301,22 @@ export async function buildBatchSwap(
         data: calldataSwapAgentToRouter,
       };
 
+      if (swapAgentToRouter)
+        console.log(
+          "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+        );
+
       Calldatas.push(swapAgentToRouter);
       TokensReturn.push(tokenBAddress);
     }
   }
 
-  console.log("::API:: Approvals", Approvals);
-  console.log("::API:: Calldatas", Calldatas);
-  console.log("::API:: TokensReturn", TokensReturn);
+  console.log("::API::UNISWAP::BUILDSWAP:BATCHED Approvals", Approvals.length);
+  console.log("::API::UNISWAP::BUILDSWAP:BATCHED Calldatas", Calldatas.length);
+  console.log(
+    "::API::UNISWAP::BUILDSWAP:BATCHED TokensReturn",
+    TokensReturn.length
+  );
 
   return {
     Approvals,

@@ -1,5 +1,5 @@
 import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
-import { buildSwap, buildBatchSwap } from "./uni-v3/swap-tokens";
+import { buildSwap, buildBatchSwap } from "./uniswap/pool";
 import {
   depositToYearn,
   depositToYearnBatched,
@@ -8,7 +8,7 @@ import {
   accuredYearnInterest,
   previewWithdraw,
   getVaultAsset,
-} from "./yearn/deposit-redeem";
+} from "./yearn/vault";
 
 // import Router.json
 import Router from "./abis/infra/Router.json";

@@ -2,9 +2,9 @@
 import express from "express";
 import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
 
-import { buildSwap } from "./uni-v3/swap-tokens";
+import { buildSwap } from "./uniswap/pool";
 import { BigNumber, ethers } from "ethers";
-import { depositToYearn, redeemFromYearn } from "./yearn/deposit-redeem";
+import { depositToYearn, redeemFromYearn } from "./yearn/vault";
 
 const app = express();
 const port = 3001;
