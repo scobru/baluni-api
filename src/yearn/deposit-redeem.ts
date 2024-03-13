@@ -526,8 +526,6 @@ export async function redeemFromYearnBatched(
         to: vault.address,
         value: 0,
         data: approveData,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
 
       Approvals.push(approvalCalldata);
@@ -549,8 +547,6 @@ export async function redeemFromYearnBatched(
         to: vault.address,
         value: 0,
         data: approveData,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
 
       Calldatas.push(approvalCalldata);
@@ -571,8 +567,6 @@ export async function redeemFromYearnBatched(
       to: vault.address,
       value: 0,
       data: transferFromData,
-      // gasLimit: gasLimit,
-      // gasPrice: gas,
     };
 
     Calldatas.push(transferFromCalldata);
@@ -590,8 +584,6 @@ export async function redeemFromYearnBatched(
       to: pool,
       value: 0,
       data: redeemData,
-      // gasLimit: gasLimit,
-      // gasPrice: gas,
     };
 
     Calldatas.push(redeemCalldata);

@@ -52,9 +52,9 @@ export async function buildSwap(
   // const tokenBContract = new Contract(tokenBAddress, erc20Abi, provider);
   // const tokenBDecimals = await tokenBContract.decimals();
 
-  const gasLimit: Number = 30000000;
-  const gasPrice: BigNumberish = await wallet.provider.getGasPrice();
-  const gas: BigNumberish = gasPrice;
+  // const gasLimit: Number = 30000000;
+  // const gasPrice: BigNumberish = await wallet.provider.getGasPrice();
+  // const gas: BigNumberish = gasPrice;
 
   let Approvals = [];
   let Calldatas = [];
@@ -213,6 +213,7 @@ export async function buildSwap(
     let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
 
     console.log("::API:: EXACT_INPUT");
+
     const calldataSwapAgentToRouter =
       swapRouterContract.interface.encodeFunctionData("exactInput", [
         swapTxInputs,

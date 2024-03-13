@@ -1,4 +1,4 @@
-import { Contract, Wallet, ethers, providers } from "ethers";
+import { BigNumberish, Contract, Wallet, ethers, providers } from "ethers";
 import erc20Abi from "../abis/common/ERC20.json";
 import swapRouterAbi from "../abis/uniswap/SwapRouter.json";
 import routerAbi from "../abis/infra/Router.json";
@@ -51,9 +51,9 @@ export async function buildBatchSwap(
   const swapRouterContract = new Contract(uniRouter, swapRouterAbi, wallet);
   const quoter = String(protocol.QUOTER);
   const quoterContract = new Contract(quoter, quoterAbi, wallet);
-  const gasLimit = 9000000;
-  const gasPrice = await provider?.getGasPrice();
-  const gas = gasPrice.add(gasPrice.div(10));
+  // const gasLimit: Number = 30000000;
+  // const gasPrice: BigNumberish = await wallet.provider.getGasPrice();
+  // const gas: BigNumberish = gasPrice;
 
   let Approvals = [];
   let Calldatas = [];
@@ -93,7 +93,7 @@ export async function buildBatchSwap(
     // ----------------------------------------------------------------------------
     // ----------------------------------------------------------------------------
 
-    if (Number(adjAmount) > Number(allowanceAgent)) {
+    if (adjAmount.gt(allowanceAgent)) {
       console.log("::API:: Agent does not have enough allowance");
       const dataApproveToAgent = tokenAContract?.interface.encodeFunctionData(
         "approve",
@@ -104,8 +104,6 @@ export async function buildBatchSwap(
         to: tokenAAddress,
         value: 0,
         data: dataApproveToAgent,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
 
       Approvals.push(approvalToAgent);
@@ -122,7 +120,7 @@ export async function buildBatchSwap(
       uniRouter
     );
 
-    if (Number(adjAmount) > Number(allowanceAgentToUniRouter)) {
+    if (adjAmount.gt(allowanceAgentToUniRouter)) {
       console.log(
         "::API:: Agent does not have enough allowance for Uni Router"
       );
@@ -137,8 +135,6 @@ export async function buildBatchSwap(
         to: tokenAAddress,
         value: 0,
         data: calldataApproveAgentToRouter,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
 
       Calldatas.push(approvalAgentToRouter);
@@ -161,8 +157,6 @@ export async function buildBatchSwap(
       to: tokenAAddress,
       value: 0,
       data: dataTransferFromSenderToAgent,
-      // gasLimit: gasLimit,
-      // gasPrice: gas,
     };
 
     Calldatas.push(transferFromSenderToAgent);
@@ -232,8 +226,6 @@ export async function buildBatchSwap(
         to: uniRouter,
         value: 0,
         data: calldataSwapAgentToRouter,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
 
       Calldatas.push(swapMultiAgentToRouter);
@@ -285,8 +277,6 @@ export async function buildBatchSwap(
         to: uniRouter,
         value: 0,
         data: calldataSwapAgentToRouter,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
 
       Calldatas.push(swapAgentToRouter);
