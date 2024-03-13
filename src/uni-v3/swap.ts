@@ -128,7 +128,7 @@ export async function buildSwap(
     console.log("::API:: AGENT_NO_ALLOWANCE_UNIROUTER");
 
     const calldataApproveAgentToRouter =
-      tokenAContract.interface.encodeFunctionData("approve(address,uint256)", [
+      tokenAContract.interface.encodeFunctionData("approve", [
         uniRouter,
         ethers.constants.MaxUint256,
       ]);
@@ -148,10 +148,11 @@ export async function buildSwap(
   // ----------------------------------------------------------------------------
   // ----------------------------------------------------------------------------
   const dataTransferFromSenderToAgent =
-    tokenAContract.interface.encodeFunctionData(
-      "transferFrom(address,address,uint256)",
-      [address, agentAddress, adjAmount]
-    );
+    tokenAContract.interface.encodeFunctionData("transferFrom", [
+      address,
+      agentAddress,
+      adjAmount,
+    ]);
 
   const transferFromSenderToAgent = {
     to: tokenAAddress,
