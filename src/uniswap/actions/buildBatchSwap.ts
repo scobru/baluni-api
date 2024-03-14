@@ -45,10 +45,13 @@ export async function buildBatchSwap(
   );
   const wallet = swaps[0].wallet;
   const protocol = PROTOCOLS[swaps[0].chainId][swaps[0].protocol];
+
   const infraRouter = String(INFRA[swaps[0].chainId].ROUTER);
   const InfraRouterContract = new Contract(infraRouter, routerAbi, wallet);
+
   const uniRouter = String(protocol.ROUTER);
   const swapRouterContract = new Contract(uniRouter, swapRouterAbi, wallet);
+
   const quoter = String(protocol.QUOTER);
   const quoterContract = new Contract(quoter, quoterAbi, wallet);
 
@@ -64,16 +67,21 @@ export async function buildBatchSwap(
       swap.address
     );
     console.log("::API::UNISWAP::BUILDSWAP:BATCHED AGENT", agentAddress);
+
     const tokenAAddress = swap.reverse ? swap.token1 : swap.token0;
     const tokenBAddress = swap.reverse ? swap.token0 : swap.token1;
+
     const tokenAContract = new Contract(tokenAAddress, erc20Abi, wallet);
+    const tokenABalance = await tokenAContract?.balanceOf(swap.address);
+
+    console.log("::API::UNISWAP::BUILDSWAP:BATCHED BALANCE", tokenABalance);
 
     const allowanceAgent = await tokenAContract?.allowance(
       swap.address,
       agentAddress
     );
-
     const tokenADecimals = await tokenAContract.decimals();
+
     let adjAmount: any = ethers.BigNumber.from(0);
 
     console.log(
@@ -82,6 +90,11 @@ export async function buildBatchSwap(
     );
 
     adjAmount = getAdjAmount(swap.amount, tokenADecimals);
+
+    if (tokenABalance.lt(adjAmount)) {
+      throw new Error("INSUFFICIENT_BALANCE");
+      return;
+    }
 
     console.log(
       "::API::UNISWAP::BUILDSWAP:BATCHED ADJ_AMOUNT:",
@@ -100,11 +113,11 @@ export async function buildBatchSwap(
       console.log(
         "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_SENDER"
       );
+
       const dataApproveToAgent = tokenAContract?.interface.encodeFunctionData(
         "approve",
         [agentAddress, ethers.constants.MaxUint256]
       );
-
       const approvalToAgent = {
         to: tokenAAddress,
         value: 0,
@@ -198,7 +211,6 @@ export async function buildBatchSwap(
         adjAmount,
         slippageTolerance
       );
-
       const expectedAmountB: BigNumber =
         await quoterContract?.callStatic?.quoteExactInputSingle?.(
           tokenAAddress,
@@ -218,13 +230,24 @@ export async function buildBatchSwap(
 
       let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
 
-      const path = ethers.utils.solidityPack(
+      /* const path = ethers.utils.solidityPack(
         ["address", "uint24", "address", "uint24", "address"],
         [
           tokenAAddress,
           poolFee,
           NATIVETOKENS[swap.chainId].WRAPPED,
           poolFee2,
+          tokenBAddress,
+        ]
+      ); */
+
+      const path = ethers.utils.solidityPack(
+        ["address", "uint24", "address", "uint24", "address"],
+        [
+          tokenAAddress,
+          3000,
+          NATIVETOKENS[swap.chainId].WRAPPED,
+          3000,
           tokenBAddress,
         ]
       );
@@ -235,7 +258,6 @@ export async function buildBatchSwap(
         swapRouterContract.interface.encodeFunctionData("exactInput", [
           swapTxInputs,
         ]);
-
       const swapMultiAgentToRouter = {
         to: uniRouter,
         value: 0,
@@ -246,12 +268,12 @@ export async function buildBatchSwap(
         console.log(
           "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
         );
-
       Calldatas.push(swapMultiAgentToRouter);
       TokensReturn.push(tokenBAddress);
     } else {
       const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
       const quoterAddress = quoter;
+
       const quoterContract = new Contract(quoterAddress, quoterAbi, provider);
       const slippageTolerance = swap.slippage;
 
@@ -262,7 +284,6 @@ export async function buildBatchSwap(
         adjAmount,
         slippageTolerance
       );
-
       const expectedAmountB: BigNumber =
         await quoterContract?.callStatic?.quoteExactInputSingle?.(
           tokenAAddress,
@@ -275,7 +296,6 @@ export async function buildBatchSwap(
       const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
         .mul(10000 - slippageTolerance)
         .div(10000);
-
       const swapTxInputs = [
         tokenAAddress,
         tokenBAddress,
@@ -283,7 +303,7 @@ export async function buildBatchSwap(
         agentAddress!,
         swapDeadline,
         adjAmount,
-        1,
+        0,
         0,
       ];
 
@@ -291,7 +311,6 @@ export async function buildBatchSwap(
         swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
           swapTxInputs,
         ]);
-
       const swapAgentToRouter = {
         to: uniRouter,
         value: 0,
@@ -307,7 +326,6 @@ export async function buildBatchSwap(
       TokensReturn.push(tokenBAddress);
     }
   }
-
   console.log("::API::UNISWAP::BUILDSWAP:BATCHED Approvals", Approvals.length);
   console.log("::API::UNISWAP::BUILDSWAP:BATCHED Calldatas", Calldatas.length);
   console.log(

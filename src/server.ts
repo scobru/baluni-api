@@ -359,7 +359,7 @@ app.post("/write-config", async (req, res) => {
 });
 
 // Example: POST /swap/0x1234.../USDC/ETH/false/uni-v3/1/100
-app.post(
+app.get(
   "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount/:slippage",
   async (req, res) => {
     const {
