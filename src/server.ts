@@ -364,7 +364,7 @@ app.post("/write-config", async (req, res) => {
 
 // Example: POST /swap/0x1234.../USDC/ETH/false/uni-v3/1/100
 app.get(
-  "/swap/:address/:token0/:token1/:reverse/:protocol/:chainId/:amount/:slippage",
+  "/:chainId/swap/:address/:token0/:token1/:reverse/:protocol/:amount/:slippage",
   async (req, res) => {
     const {
       address,
@@ -421,7 +421,7 @@ app.get(
 );
 
 app.get(
-  "/depositToYearn/:tokenSymbol/:strategy/:boosted/:amount/:receiver/:chainId",
+  "/:chainId/yearn/deposit/:tokenSymbol/:strategy/:boosted/:amount/:receiver/",
   async (req, res) => {
     try {
       const { tokenSymbol, strategy, amount, receiver, chainId, boosted } =
@@ -502,7 +502,7 @@ app.get(
 );
 
 app.get(
-  "/redeemFromYearn/:tokenSymbol/:strategy/:boosted/:amount/:receiver/:chainId",
+  ":chainId/yearn/redeem/:tokenSymbol/:strategy/:boosted/:amount/:receiver/",
   async (req, res) => {
     try {
       const { tokenSymbol, strategy, amount, receiver, chainId, boosted } =
