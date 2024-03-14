@@ -230,24 +230,13 @@ export async function buildBatchSwap(
 
       let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
 
-      /* const path = ethers.utils.solidityPack(
+      const path = ethers.utils.solidityPack(
         ["address", "uint24", "address", "uint24", "address"],
         [
           tokenAAddress,
           poolFee,
           NATIVETOKENS[swap.chainId].WRAPPED,
           poolFee2,
-          tokenBAddress,
-        ]
-      ); */
-
-      const path = ethers.utils.solidityPack(
-        ["address", "uint24", "address", "uint24", "address"],
-        [
-          tokenAAddress,
-          3000,
-          NATIVETOKENS[swap.chainId].WRAPPED,
-          3000,
           tokenBAddress,
         ]
       );

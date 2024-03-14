@@ -1,10 +1,10 @@
 // server.ts
 import express from "express";
 import { PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
-
 import { buildSwap } from "./uniswap/pool";
 import { BigNumber, ethers } from "ethers";
 import { depositToYearn, redeemFromYearn } from "./yearn/vault";
+import { fetchTokenAddressByName } from "./utils/fetchTokenAddressByName";
 
 const app = express();
 const port = 3001;
@@ -46,8 +46,6 @@ const CONFIGURATIONS: Configurations = {
   nativeTokens: NATIVETOKENS,
   networks: NETWORKS,
 };
-
-const TOKENS_URL = "https://gateway.ipfs.io/ipns/tokens.uniswap.org";
 
 app.use(express.json());
 
@@ -563,30 +561,6 @@ async function fetchYearnVaultsData(chainId: number): Promise<YearnVault[]> {
   } catch (error) {
     console.error("Failed to fetch Yearn Finance vaults:", error);
     return [];
-  }
-}
-
-// Fetch token address by name from the Uniswap token list
-async function fetchTokenAddressByName(
-  tokenSymbol: string,
-  chainId: number
-): Promise<string | null> {
-  try {
-    const response = await fetch(TOKENS_URL);
-    const data = await response.json();
-
-    // Filtra i token per chainId e cerca un token che corrisponda al tokenSymbol fornito
-    const matchingToken = data.tokens.find(
-      (token: { chainId: number; symbol: string }) =>
-        token.chainId === chainId &&
-        token.symbol.toLowerCase() === tokenSymbol.toLowerCase()
-    );
-
-    // Se il token esiste, restituisci il suo indirizzo
-    return matchingToken ? matchingToken.address : null;
-  } catch (error) {
-    console.error("Failed to fetch token address:", error);
-    return null;
   }
 }
 
