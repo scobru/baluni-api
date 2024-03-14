@@ -434,7 +434,6 @@ app.get(
         .filter((vault) => {
           const matchesSymbol =
             vault.token.symbol.toLowerCase() === tokenSymbol.toLowerCase();
-          decimals = vault.token.decimals;
           const isVersion3 =
             vault.version?.startsWith("3.0") ||
             vault.name.includes("3.0") ||
@@ -510,7 +509,19 @@ app.get(
         req.params;
 
       // Convert the amount from string to BigNumber
-      const amountInstance = BigNumber.from(amount);
+      let adjAmount: ethers.BigNumber;
+
+      if (
+        tokenSymbol === "USDC" ||
+        tokenSymbol === "USDT" ||
+        tokenSymbol === "USDC.E"
+      ) {
+        adjAmount = ethers.utils.parseUnits(amount, 6);
+      } else if (tokenSymbol === "WBTC") {
+        adjAmount = ethers.utils.parseUnits(amount, 8);
+      } else {
+        adjAmount = ethers.utils.parseUnits(amount, 18);
+      }
 
       // Ora `config` è del tipo corretto
       const filteredVaults = await fetchYearnVaultsData(Number(chainId));
@@ -554,7 +565,7 @@ app.get(
       const result = await redeemFromYearn(
         walletInstance,
         vaultAddress.address,
-        amountInstance,
+        adjAmount,
         receiver,
         chainId
       );
