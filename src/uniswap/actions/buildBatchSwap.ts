@@ -51,9 +51,6 @@ export async function buildBatchSwap(
   const swapRouterContract = new Contract(uniRouter, swapRouterAbi, wallet);
   const quoter = String(protocol.QUOTER);
   const quoterContract = new Contract(quoter, quoterAbi, wallet);
-  // const gasLimit: Number = 30000000;
-  // const gasPrice: BigNumberish = await wallet.provider.getGasPrice();
-  // const gas: BigNumberish = gasPrice;
 
   let Approvals = [];
   let Calldatas = [];
@@ -286,7 +283,7 @@ export async function buildBatchSwap(
         agentAddress!,
         swapDeadline,
         adjAmount,
-        0,
+        1,
         0,
       ];
 

@@ -41,6 +41,7 @@ export async function depositToYearn(
       "::API::YEARN::DEPOSIT ALLOWANCE_SENDER_FOR_AGENT",
       Number(allowanceAgent).toString()
     );
+    console.log("::API:: AMOUNT", Number(amount).toString());
 
     // Sender Approval
     // -------------------------------------------------------------------------
@@ -75,8 +76,6 @@ export async function depositToYearn(
         to: token.address,
         value: 0,
         data: approveData,
-        // gasLimit: gasLimit,
-        // gasPrice: gas,
       };
       Calldatas.push(approvalCalldata);
     } else {
@@ -93,8 +92,6 @@ export async function depositToYearn(
       to: token.address,
       value: 0,
       data: transferFromData,
-      // gasLimit: gasLimit,
-      // gasPrice: gas,
     };
     Calldatas.push(transferFromCalldata);
 

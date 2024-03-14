@@ -277,7 +277,7 @@ export async function buildSwap(
       agentAddress!,
       swapDeadline,
       adjAmount,
-      minimumAmountB,
+      1, // minimumAmountB edit with 0 cause slippage error
       0,
     ];
 
