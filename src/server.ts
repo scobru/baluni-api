@@ -416,7 +416,7 @@ app.get(
   }
 );
 
-app.post(
+app.get(
   "/depositToYearn/:tokenSymbol/:strategy/:boosted/:amount/:receiver/:chainId",
   async (req, res) => {
     try {
@@ -486,7 +486,7 @@ app.post(
   }
 );
 
-app.post(
+app.get(
   "/redeemFromYearn/:tokenSymbol/:strategy/:boosted/:amount/:receiver/:chainId",
   async (req, res) => {
     try {
