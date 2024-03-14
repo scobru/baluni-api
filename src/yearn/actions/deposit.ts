@@ -16,7 +16,6 @@ export async function depositToYearn(
   chainId: string
 ) {
   try {
-    const provider = new ethers.providers.JsonRpcProvider(NETWORKS[chainId]);
     const token = new ethers.Contract(tokenAddr, ERC20ABI, wallet);
     const vault = new ethers.Contract(pool, YEARN_VAULT_ABI, wallet);
     const tokenBalance = await token.balanceOf(receiver);
