@@ -1,9 +1,10 @@
+import { TOKENS_URL } from "../constants";
+
 export async function fetchTokenAddressByName(
   tokenSymbol: string,
   chainId: number
 ): Promise<string | null> {
   try {
-    const TOKENS_URL = "https://gateway.ipfs.io/ipns/tokens.uniswap.org";
     const response = await fetch(TOKENS_URL);
     const data = await response.json();
 

@@ -48,3 +48,5 @@ export const NETWORKS: NetworkConfig = {
   "137":
     "https://dimensional-floral-lambo.matic.quiknode.pro/a88e447e38026a8fefcd885d500e28229dd116ca/",
 };
+
+export const TOKENS_URL = "https://gateway.ipfs.io/ipns/tokens.uniswap.org";
