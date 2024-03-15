@@ -7,7 +7,7 @@ import {
   NETWORKS,
   TOKENS_URL,
 } from "./constants";
-import { buildSwap } from "./uniswap/pool";
+import { buildSwap } from "./uniswap";
 import { BigNumber, ethers } from "ethers";
 import { depositToYearn, redeemFromYearn } from "./yearn/vault";
 import { fetchTokenAddressByName } from "./utils/fetchTokenAddressByName";

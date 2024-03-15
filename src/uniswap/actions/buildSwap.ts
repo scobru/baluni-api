@@ -51,6 +51,7 @@ export async function buildSwap(
   const tokenADecimals = await tokenAContract.decimals();
 
   const tokenABalance = await tokenAContract.balanceOf(address);
+
   console.log(
     "::API::UNISWAP::BUILDSWAP TOKEN_A_BALANCE ",
     Number(tokenABalance)
@@ -66,6 +67,7 @@ export async function buildSwap(
   let Approvals = [];
   let Calldatas = [];
   let adjAmount: any = ethers.BigNumber.from(0);
+
   console.log(
     "::API::UNISWAP::BUILDSWAP TOKEN_DECIMAL ",
     Number(tokenADecimals)

@@ -1,6 +1,6 @@
 {
   "name": "baluni-api",
-  "version": "1.4.5",
+  "version": "1.4.8",
   "description": "Api for baluni-cli",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

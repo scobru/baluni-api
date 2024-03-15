@@ -178,7 +178,7 @@ export async function redeemFromYearnBatched(
     const vaultBalance = await vault.balanceOf(receiver);
 
     if (vaultBalance.lt(amount)) {
-      throw new Error("::API:: Insufficient balance");
+      throw new Error("::API::YEARN::REDEEM:BATCHED Insufficient balance");
     }
 
     const infraRouter = String(INFRA[chainId].ROUTER);
@@ -220,10 +220,10 @@ export async function redeemFromYearnBatched(
     // -------------------------------------------------------------------------
     if (allowanceAgentYearn.lt(amount)) {
       console.log("::API:: NO_ALLOWANCE_AGENT_FOR_YEARN");
-      const approveData = vault.interface.encodeFunctionData(
-        "approve(address,uint256)",
-        [pool, ethers.constants.MaxUint256]
-      );
+      const approveData = vault.interface.encodeFunctionData("approve", [
+        pool,
+        ethers.constants.MaxUint256,
+      ]);
 
       const approvalCalldata = {
         to: vault.address,
@@ -284,9 +284,9 @@ export async function redeemFromYearnBatched(
     TokensReturn.push(asset);
   }
 
-  console.log("::API:: Approvals", Approvals.length);
-  console.log("::API:: Calldatas", Calldatas.length);
-  console.log("::API:: TokensReturn", TokensReturn.length);
+  console.log("::API::YEARN::REDEEM:BATCHED Approvals", Approvals.length);
+  console.log("::API::YEARN::REDEEM:BATCHED Calldatas", Calldatas.length);
+  console.log("::API::YEARN::REDEEM:BATCHED TokensReturn", TokensReturn.length);
 
   return {
     Approvals,

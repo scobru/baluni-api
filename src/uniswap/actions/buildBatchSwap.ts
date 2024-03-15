@@ -285,6 +285,7 @@ export async function buildBatchSwap(
       const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
         .mul(10000 - slippageTolerance)
         .div(10000);
+
       const swapTxInputs = [
         tokenAAddress,
         tokenBAddress,
@@ -292,7 +293,7 @@ export async function buildBatchSwap(
         agentAddress!,
         swapDeadline,
         adjAmount,
-        0,
+        minimumAmountB,
         0,
       ];
 

@@ -1,5 +1,5 @@
 import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
-import { buildSwap, buildBatchSwap } from "./uniswap/pool";
+import { buildSwap, buildBatchSwap } from "./uniswap";
 import {
   depositToYearn,
   depositToYearnBatched,
@@ -14,6 +14,8 @@ import {
 import Router from "./abis/infra/Router.json";
 import Agent from "./abis/infra/Agent.json";
 
+import OffChainOracleAbi from "./abis/1inch/OffChainOracle.json";
+
 export {
   INFRA,
   PROTOCOLS,
@@ -21,9 +23,14 @@ export {
   NATIVETOKENS,
   NETWORKS,
   BASEURL,
+  TOKENS_URL,
 } from "./constants";
 
-export { Router, Agent };
+export {
+  Router as RouterABI,
+  Agent as AgentABI,
+  OffChainOracleAbi as OffChainOracleABI,
+};
 export { buildSwap, buildBatchSwap };
 export {
   depositToYearn,
