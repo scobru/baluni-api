@@ -81,250 +81,253 @@ export async function buildSwap(
   console.log("::API::UNISWAP::BUILDSWAP ADJ_AMOUNT ", Number(adjAmount));
 
   if (tokenABalance.lt(adjAmount)) {
-    throw new Error("Insufficient Balance");
-    return;
-  }
-
-  if (adjAmount == 0) {
-    throw new Error("Invalid Token Decimals");
-  }
-  const quoterContract = new Contract(quoter, quoterAbi, wallet);
-  const quote = await quotePair(tokenAAddress, tokenBAddress, Number(chainId));
-
-  const allowanceAgent: BigNumber = await tokenAContract?.allowance(
-    address,
-    agentAddress
-  );
-  const allowanceAgentToRouter: BigNumber = await tokenAContract?.allowance(
-    agentAddress,
-    uniRouter
-  );
-
-  const slippageTolerance = slippage;
-
-  console.log(
-    "::API::UNISWAP::BUILDSWAP ALLOWANCE_AGENT_SENDER_AMOUNT",
-    Number(allowanceAgent)
-  );
-  console.log(
-    "::API::UNISWAP::BUILDSWAP ALLOWANCE_AGENT_UNIROUTER_AMOUNT",
-    Number(allowanceAgentToRouter)
-  );
-  console.log("::API::UNISWAP::BUILDSWAP ROUTER_ADDRESS", infraRouter);
-  console.log("::API::UNISWAP::BUILDSWAP UNI_ROUTER_ADDRESS", uniRouter);
-  console.log("::API::UNISWAP::BUILDSWAP AGENT_ADDRESS", agentAddress);
-
-  // Allowance for Sender to Agent
-  // ----------------------------------------------------------------------------
-  // ----------------------------------------------------------------------------
-
-  if (allowanceAgent.lt(adjAmount)) {
-    console.log(
-      "::API::UNISWAP::BUILDSWAP MISSING_ALLOWANCE_SENDER_FOR_AGENT "
-    );
-
-    const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
-      "approve",
-      [agentAddress, ethers.constants.MaxUint256]
-    );
-    const tx = {
-      to: tokenAAddress,
-      value: 0,
-      data: dataApproveToAgent,
-    };
-
-    Approvals.push(tx);
+    console.log("::API::UNISWAP:: BUILDSWAP INSUFFICIENT_BALANCE");
   } else {
-    console.log("::API::UNISWAP::BUILDSWAP FOUND_SENDER_ALLOWANCE_FOR_AGENT");
-  }
-
-  // Allowance for Agent to Univ3
-  // ----------------------------------------------------------------------------
-  // ----------------------------------------------------------------------------
-
-  if (allowanceAgentToRouter.lt(adjAmount)) {
-    console.log(
-      "::API::UNISWAP::BUILDSWAP MISSING_AGENT_ALLOWANCE_FOR_UNIROUTER "
+    if (adjAmount == 0) {
+      throw new Error("Invalid Token Decimals");
+    }
+    const quoterContract = new Contract(quoter, quoterAbi, wallet);
+    const quote = await quotePair(
+      tokenAAddress,
+      tokenBAddress,
+      Number(chainId)
     );
 
-    const calldataApproveAgentToRouter =
-      tokenAContract.interface.encodeFunctionData("approve", [
-        uniRouter,
-        ethers.constants.MaxUint256,
+    const allowanceAgent: BigNumber = await tokenAContract?.allowance(
+      address,
+      agentAddress
+    );
+    const allowanceAgentToRouter: BigNumber = await tokenAContract?.allowance(
+      agentAddress,
+      uniRouter
+    );
+
+    const slippageTolerance = slippage;
+
+    console.log(
+      "::API::UNISWAP::BUILDSWAP ALLOWANCE_AGENT_SENDER_AMOUNT",
+      Number(allowanceAgent)
+    );
+    console.log(
+      "::API::UNISWAP::BUILDSWAP ALLOWANCE_AGENT_UNIROUTER_AMOUNT",
+      Number(allowanceAgentToRouter)
+    );
+    console.log("::API::UNISWAP::BUILDSWAP ROUTER_ADDRESS", infraRouter);
+    console.log("::API::UNISWAP::BUILDSWAP UNI_ROUTER_ADDRESS", uniRouter);
+    console.log("::API::UNISWAP::BUILDSWAP AGENT_ADDRESS", agentAddress);
+
+    // Allowance for Sender to Agent
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    if (allowanceAgent.lt(adjAmount)) {
+      console.log(
+        "::API::UNISWAP::BUILDSWAP MISSING_ALLOWANCE_SENDER_FOR_AGENT "
+      );
+
+      const dataApproveToAgent = tokenAContract.interface.encodeFunctionData(
+        "approve",
+        [agentAddress, ethers.constants.MaxUint256]
+      );
+      const tx = {
+        to: tokenAAddress,
+        value: 0,
+        data: dataApproveToAgent,
+      };
+
+      Approvals.push(tx);
+    } else {
+      console.log("::API::UNISWAP::BUILDSWAP FOUND_SENDER_ALLOWANCE_FOR_AGENT");
+    }
+
+    // Allowance for Agent to Univ3
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    if (allowanceAgentToRouter.lt(adjAmount)) {
+      console.log(
+        "::API::UNISWAP::BUILDSWAP MISSING_AGENT_ALLOWANCE_FOR_UNIROUTER "
+      );
+
+      const calldataApproveAgentToRouter =
+        tokenAContract.interface.encodeFunctionData("approve", [
+          uniRouter,
+          ethers.constants.MaxUint256,
+        ]);
+      const tx = {
+        to: tokenAAddress,
+        value: 0,
+        data: calldataApproveAgentToRouter,
+      };
+
+      Calldatas.push(tx);
+    } else {
+      console.log(
+        "::API::UNISWAP::BUILDSWAP FOUND_AGENT_ALLOWANCE_FOR_UNIROUTER"
+      );
+    }
+
+    // Transfer tokens from Sender to Agent
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+    const dataTransferFromSenderToAgent =
+      tokenAContract.interface.encodeFunctionData("transferFrom", [
+        address,
+        agentAddress,
+        adjAmount,
       ]);
     const tx = {
       to: tokenAAddress,
       value: 0,
-      data: calldataApproveAgentToRouter,
+      data: dataTransferFromSenderToAgent,
     };
 
-    Calldatas.push(tx);
-  } else {
-    console.log(
-      "::API::UNISWAP::BUILDSWAP FOUND_AGENT_ALLOWANCE_FOR_UNIROUTER"
-    );
-  }
-
-  // Transfer tokens from Sender to Agent
-  // ----------------------------------------------------------------------------
-  // ----------------------------------------------------------------------------
-  const dataTransferFromSenderToAgent =
-    tokenAContract.interface.encodeFunctionData("transferFrom", [
-      address,
-      agentAddress,
-      adjAmount,
-    ]);
-  const tx = {
-    to: tokenAAddress,
-    value: 0,
-    data: dataTransferFromSenderToAgent,
-  };
-
-  if (tx)
-    console.log(
-      "::API::UNISWAP::BUILDSWAP BUILD_TRANSFER_FROM_SENDER_TO_AGENT"
-    );
-
-  Calldatas.push(tx);
-
-  // Encode Swap tx to Uni Router
-  // ----------------------------------------------------------------------------
-  // ----------------------------------------------------------------------------
-
-  if (!quote) {
-    console.error("❌ USDC_POOL_NOT_FOUND");
-    console.log("↩️  ENCODE_WMATIC_ROUTE");
-
-    const poolFee = await findPoolAndFee(
-      quoterContract,
-      tokenAAddress,
-      NATIVETOKENS[chainId].WRAPPED,
-      adjAmount,
-      slippageTolerance
-    );
-    const expectedAmountB: BigNumber =
-      await quoterContract?.callStatic?.quoteExactInputSingle?.(
-        tokenAAddress,
-        NATIVETOKENS[chainId].WRAPPED,
-        poolFee,
-        adjAmount,
-        0
+    if (tx)
+      console.log(
+        "::API::UNISWAP::BUILDSWAP BUILD_TRANSFER_FROM_SENDER_TO_AGENT"
       );
 
-    const poolFee2 = await findPoolAndFee(
-      quoterContract,
-      NATIVETOKENS[chainId].WRAPPED,
-      tokenBAddress,
-      expectedAmountB as any,
-      slippageTolerance
-    );
+    Calldatas.push(tx);
 
-    console.log("::API::UNISWAP::BUILDSWAP POOL_FEE", Number(poolFee));
-    console.log("::API::UNISWAP::BUILDSWAP POOL_FEE2", Number(poolFee2));
+    // Encode Swap tx to Uni Router
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
 
-    let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
+    if (!quote) {
+      console.error("❌ USDC_POOL_NOT_FOUND");
+      console.log("↩️  ENCODE_WMATIC_ROUTE");
 
-    const path = ethers.utils.solidityPack(
-      ["address", "uint24", "address", "uint24", "address"],
-      [
+      const poolFee = await findPoolAndFee(
+        quoterContract,
         tokenAAddress,
-        poolFee,
         NATIVETOKENS[chainId].WRAPPED,
-        poolFee2,
-        tokenBAddress,
-      ]
-    );
+        adjAmount,
+        slippageTolerance
+      );
+      const expectedAmountB: BigNumber =
+        await quoterContract?.callStatic?.quoteExactInputSingle?.(
+          tokenAAddress,
+          NATIVETOKENS[chainId].WRAPPED,
+          poolFee,
+          adjAmount,
+          0
+        );
 
-    /* const path = ethers.utils.solidityPack(
+      const poolFee2 = await findPoolAndFee(
+        quoterContract,
+        NATIVETOKENS[chainId].WRAPPED,
+        tokenBAddress,
+        expectedAmountB as any,
+        slippageTolerance
+      );
+
+      console.log("::API::UNISWAP::BUILDSWAP POOL_FEE", Number(poolFee));
+      console.log("::API::UNISWAP::BUILDSWAP POOL_FEE2", Number(poolFee2));
+
+      let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
+
+      const path = ethers.utils.solidityPack(
+        ["address", "uint24", "address", "uint24", "address"],
+        [
+          tokenAAddress,
+          poolFee,
+          NATIVETOKENS[chainId].WRAPPED,
+          poolFee2,
+          tokenBAddress,
+        ]
+      );
+
+      /* const path = ethers.utils.solidityPack(
       ["address", "uint24", "address", "uint24", "address"],
       [tokenAAddress, 3000, NATIVETOKENS[chainId].WRAPPED, 3000, tokenBAddress]
     ); */
 
-    let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
+      let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
 
-    const calldataSwapAgentToRouter =
-      swapRouterContract.interface.encodeFunctionData("exactInput", [
-        swapTxInputs,
-      ]);
-    const tx = {
-      to: PROTOCOLS[chainId][protocol].ROUTER as string,
-      value: 0,
-      data: calldataSwapAgentToRouter,
-    };
+      const calldataSwapAgentToRouter =
+        swapRouterContract.interface.encodeFunctionData("exactInput", [
+          swapTxInputs,
+        ]);
+      const tx = {
+        to: PROTOCOLS[chainId][protocol].ROUTER as string,
+        value: 0,
+        data: calldataSwapAgentToRouter,
+      };
 
-    if (tx)
-      console.log(
-        "::API::UNISWAP::BUILDSWAP BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+      if (tx)
+        console.log(
+          "::API::UNISWAP::BUILDSWAP BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+        );
+
+      Calldatas.push(tx);
+    } else {
+      const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
+      const poolFee = await findPoolAndFee(
+        quoterContract,
+        tokenAAddress,
+        tokenBAddress,
+        adjAmount,
+        slippageTolerance
       );
 
-    Calldatas.push(tx);
-  } else {
-    const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-    const poolFee = await findPoolAndFee(
-      quoterContract,
-      tokenAAddress,
-      tokenBAddress,
-      adjAmount,
-      slippageTolerance
-    );
+      console.log("::API::UNISWAP::BUILDSWAP POOL_FEE", Number(poolFee));
 
-    console.log("::API::UNISWAP::BUILDSWAP POOL_FEE", Number(poolFee));
+      const expectedAmountB: BigNumber =
+        await quoterContract?.callStatic?.quoteExactInputSingle?.(
+          tokenAAddress,
+          tokenBAddress,
+          poolFee,
+          adjAmount,
+          0
+        );
+      const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
+        .mul(10000 - slippageTolerance)
+        .div(10000);
 
-    const expectedAmountB: BigNumber =
-      await quoterContract?.callStatic?.quoteExactInputSingle?.(
+      console.log("::API::UNISWAP::BUILDSWAP POOL_FEE", Number(poolFee));
+      console.log(
+        "::API::UNISWAP::BUILDSWAP SWAP_DEADLINE",
+        Number(swapDeadline)
+      );
+
+      console.log("::API::UNISWAP::BUILDSWAP ADJ_AMOUNT", Number(adjAmount));
+      console.log(
+        "::API::UNISWAP::BUILDSWAP EXPECTED_AMOUNT_B",
+        Number(expectedAmountB)
+      );
+
+      console.log(
+        "::API::UNISWAP::BUILDSWAP MINIMUM_AMOUNT_B",
+        Number(minimumAmountB)
+      );
+
+      const swapTxInputs = [
         tokenAAddress,
         tokenBAddress,
         poolFee,
+        agentAddress,
+        swapDeadline,
         adjAmount,
-        0
-      );
-    const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
-      .mul(10000 - slippageTolerance)
-      .div(10000);
+        minimumAmountB, // minimumAmountB edit with 0 cause slippage error
+        0,
+      ];
+      const calldataSwapAgentToRouter =
+        swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
+          swapTxInputs,
+        ]);
 
-    console.log("::API::UNISWAP::BUILDSWAP POOL_FEE", Number(poolFee));
-    console.log(
-      "::API::UNISWAP::BUILDSWAP SWAP_DEADLINE",
-      Number(swapDeadline)
-    );
+      const tx = {
+        to: uniRouter,
+        value: 0,
+        data: calldataSwapAgentToRouter,
+      };
 
-    console.log("::API::UNISWAP::BUILDSWAP ADJ_AMOUNT", Number(adjAmount));
-    console.log(
-      "::API::UNISWAP::BUILDSWAP EXPECTED_AMOUNT_B",
-      Number(expectedAmountB)
-    );
-
-    console.log(
-      "::API::UNISWAP::BUILDSWAP MINIMUM_AMOUNT_B",
-      Number(minimumAmountB)
-    );
-
-    const swapTxInputs = [
-      tokenAAddress,
-      tokenBAddress,
-      poolFee,
-      agentAddress,
-      swapDeadline,
-      adjAmount,
-      minimumAmountB, // minimumAmountB edit with 0 cause slippage error
-      0,
-    ];
-    const calldataSwapAgentToRouter =
-      swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
-        swapTxInputs,
-      ]);
-
-    const tx = {
-      to: uniRouter,
-      value: 0,
-      data: calldataSwapAgentToRouter,
-    };
-
-    if (tx)
-      console.log(
-        "::API::UNISWAP::BUILDSWAP BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
-      );
-    Calldatas.push(tx);
+      if (tx)
+        console.log(
+          "::API::UNISWAP::BUILDSWAP BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+        );
+      Calldatas.push(tx);
+    }
   }
 
   const TokensReturn = [tokenBAddress];
