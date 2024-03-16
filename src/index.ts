@@ -1,4 +1,11 @@
-import { INFRA, PROTOCOLS, ORACLE, NATIVETOKENS, NETWORKS } from "./constants";
+import {
+  INFRA,
+  PROTOCOLS,
+  ORACLE,
+  NATIVETOKENS,
+  NETWORKS,
+  USDC,
+} from "./constants";
 import { buildSwap, buildBatchSwap } from "./uniswap";
 import {
   depositToYearn,
@@ -24,6 +31,7 @@ export {
   NETWORKS,
   BASEURL,
   TOKENS_URL,
+  USDC,
 } from "./constants";
 
 export {

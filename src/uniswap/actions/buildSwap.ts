@@ -56,6 +56,7 @@ export async function buildSwap(
     "::API::UNISWAP::BUILDSWAP TOKEN_A_BALANCE ",
     Number(tokenABalance)
   );
+
   console.log("::API::UNISWAP::BUILDSWAP TOKEN_A_ADDRESS ", tokenAAddress);
 
   // const tokenBContract = new Contract(tokenBAddress, erc20Abi, provider);
@@ -77,6 +78,7 @@ export async function buildSwap(
     throw new Error("Invalid Token Decimals");
   }
   adjAmount = getAdjAmount(amount, tokenADecimals) as BigNumberish;
+
   console.log("::API::UNISWAP::BUILDSWAP AMOUNT ", Number(amount));
   console.log("::API::UNISWAP::BUILDSWAP ADJ_AMOUNT ", Number(adjAmount));
 
