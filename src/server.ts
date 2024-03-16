@@ -11,6 +11,7 @@ import { buildSwap } from "./uniswap";
 import { BigNumber, ethers } from "ethers";
 import { depositToYearn, redeemFromYearn } from "./yearn/vault";
 import { fetchTokenAddressByName } from "./utils/fetchTokenAddressByName";
+import cors from "cors";
 
 const app = express();
 const port = 3001;
@@ -53,7 +54,9 @@ const CONFIGURATIONS: Configurations = {
   networks: NETWORKS,
 };
 
-app.use(express.json());
+//app.use(express.json());
+
+app.use(cors()); // Abilita CORS per tutte le rotte
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
