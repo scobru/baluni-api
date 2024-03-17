@@ -96,228 +96,221 @@ export async function buildBatchSwap(
 
     adjAmount = getAdjAmount(swap.amount, tokenADecimals);
 
-    if (tokenABalance.lt(adjAmount)) {
-      console.log("::API::UNISWAP::BUILDSWAP:BATCHED INSUFFICIENT_BALANCE");
-    } else {
+    console.log(
+      "::API::UNISWAP::BUILDSWAP:BATCHED ADJ_AMOUNT:",
+      String(adjAmount)
+    );
+
+    // Allowance for Agent to Sender
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    if (adjAmount.gt(allowanceAgent)) {
       console.log(
-        "::API::UNISWAP::BUILDSWAP:BATCHED ADJ_AMOUNT:",
-        String(adjAmount)
+        "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_SENDER"
       );
 
-      if (adjAmount == 0) {
-        throw new Error("INVALID_TOKEN_DECIMALS");
-      }
-
-      // Allowance for Agent to Sender
-      // ----------------------------------------------------------------------------
-      // ----------------------------------------------------------------------------
-
-      if (adjAmount.gt(allowanceAgent)) {
-        console.log(
-          "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_SENDER"
-        );
-
-        const dataApproveToAgent = tokenAContract?.interface.encodeFunctionData(
-          "approve",
-          [agentAddress, ethers.constants.MaxUint256]
-        );
-        const approvalToAgent = {
-          to: tokenAAddress,
-          value: 0,
-          data: dataApproveToAgent,
-        };
-
-        Approvals.push(approvalToAgent);
-      } else {
-        console.log(
-          "::API::UNISWAP::BUILDSWAP:BATCHED FOUND_ALLOWANCE_AGENT_TO_SENDER"
-        );
-      }
-
-      // Check allowance Router to UniRouter
-      // ----------------------------------------------------------------------------
-      // ----------------------------------------------------------------------------
-
-      const allowanceAgentToUniRouter = await tokenAContract?.allowance(
-        agentAddress,
-        uniRouter
+      const dataApproveToAgent = tokenAContract?.interface.encodeFunctionData(
+        "approve",
+        [agentAddress, ethers.constants.MaxUint256]
       );
-
-      if (adjAmount.gt(allowanceAgentToUniRouter)) {
-        console.log(
-          "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_UNIROUTER"
-        );
-
-        const calldataApproveAgentToRouter =
-          tokenAContract.interface.encodeFunctionData("approve", [
-            uniRouter,
-            ethers.constants.MaxUint256,
-          ]);
-
-        const approvalAgentToRouter = {
-          to: tokenAAddress,
-          value: 0,
-          data: calldataApproveAgentToRouter,
-        };
-
-        Calldatas.push(approvalAgentToRouter);
-      } else {
-        console.log(
-          "::API::UNISWAP::BUILDSWAP:BATCHED FOUND_ALLOWANCE_AGENT_TO_UNIROUTER"
-        );
-      }
-
-      // Transfer tokens from Sender to Agent
-      // ----------------------------------------------------------------------------
-      // ----------------------------------------------------------------------------
-
-      const dataTransferFromSenderToAgent =
-        tokenAContract.interface.encodeFunctionData("transferFrom", [
-          swap.address,
-          agentAddress,
-          adjAmount,
-        ]);
-
-      const transferFromSenderToAgent = {
+      const approvalToAgent = {
         to: tokenAAddress,
         value: 0,
-        data: dataTransferFromSenderToAgent,
+        data: dataApproveToAgent,
       };
 
-      if (transferFromSenderToAgent)
-        console.log(
-          "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_TRANSFER_FROM_SENDER_TO_AGENT"
-        );
+      Approvals.push(approvalToAgent);
+    } else {
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED FOUND_ALLOWANCE_AGENT_TO_SENDER"
+      );
+    }
 
-      Calldatas.push(transferFromSenderToAgent);
+    // Check allowance Router to UniRouter
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
 
-      // Encode Swap tx to Uni Router
-      // ----------------------------------------------------------------------------
-      // ----------------------------------------------------------------------------
+    const allowanceAgentToUniRouter = await tokenAContract?.allowance(
+      agentAddress,
+      uniRouter
+    );
 
-      const quote = await quotePair(
-        tokenAAddress,
-        tokenBAddress,
-        Number(swap.chainId)
+    if (adjAmount.gt(allowanceAgentToUniRouter)) {
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED MISSING_ALLOWANCE_AGENT_TO_UNIROUTER"
       );
 
+      const calldataApproveAgentToRouter =
+        tokenAContract.interface.encodeFunctionData("approve", [
+          uniRouter,
+          ethers.constants.MaxUint256,
+        ]);
+
+      const approvalAgentToRouter = {
+        to: tokenAAddress,
+        value: 0,
+        data: calldataApproveAgentToRouter,
+      };
+
+      Calldatas.push(approvalAgentToRouter);
+    } else {
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED FOUND_ALLOWANCE_AGENT_TO_UNIROUTER"
+      );
+    }
+
+    // Transfer tokens from Sender to Agent
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    const dataTransferFromSenderToAgent =
+      tokenAContract.interface.encodeFunctionData("transferFrom", [
+        swap.address,
+        agentAddress,
+        adjAmount,
+      ]);
+
+    const transferFromSenderToAgent = {
+      to: tokenAAddress,
+      value: 0,
+      data: dataTransferFromSenderToAgent,
+    };
+
+    if (transferFromSenderToAgent)
+      console.log(
+        "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_TRANSFER_FROM_SENDER_TO_AGENT"
+      );
+
+    Calldatas.push(transferFromSenderToAgent);
+
+    // Encode Swap tx to Uni Router
+    // ----------------------------------------------------------------------------
+    // ----------------------------------------------------------------------------
+
+    const quote = await quotePair(
+      tokenAAddress,
+      tokenBAddress,
+      Number(swap.chainId)
+    );
+
+    const slippageTolerance = swap.slippage;
+
+    if (!quote) {
+      console.error("❌ USDC Pool Not Found");
+      console.log("↩️ Using WMATIC route");
+
+      const poolFee = await findPoolAndFee(
+        quoterContract,
+        tokenAAddress,
+        NATIVETOKENS[swap.chainId].WRAPPED,
+        adjAmount,
+        slippageTolerance
+      );
+      const expectedAmountB: BigNumber =
+        await quoterContract?.callStatic?.quoteExactInputSingle?.(
+          tokenAAddress,
+          NATIVETOKENS[swap.chainId].WRAPPED,
+          poolFee,
+          adjAmount,
+          0
+        );
+
+      const poolFee2 = await findPoolAndFee(
+        quoterContract,
+        NATIVETOKENS[swap.chainId].WRAPPED,
+        tokenBAddress,
+        expectedAmountB as any, // Convert expectedAmountB to BigNumber
+        slippageTolerance
+      );
+
+      let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
+
+      const path = ethers.utils.solidityPack(
+        ["address", "uint24", "address", "uint24", "address"],
+        [
+          tokenAAddress,
+          poolFee,
+          NATIVETOKENS[swap.chainId].WRAPPED,
+          poolFee2,
+          tokenBAddress,
+        ]
+      );
+
+      let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
+
+      const calldataSwapAgentToRouter =
+        swapRouterContract.interface.encodeFunctionData("exactInput", [
+          swapTxInputs,
+        ]);
+      const swapMultiAgentToRouter = {
+        to: uniRouter,
+        value: 0,
+        data: calldataSwapAgentToRouter,
+      };
+
+      if (swapMultiAgentToRouter)
+        console.log(
+          "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+        );
+      Calldatas.push(swapMultiAgentToRouter);
+      TokensReturn.push(tokenBAddress);
+    } else {
+      const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
+      const quoterAddress = quoter;
+
+      const quoterContract = new Contract(quoterAddress, quoterAbi, provider);
       const slippageTolerance = swap.slippage;
 
-      if (!quote) {
-        console.error("❌ USDC Pool Not Found");
-        console.log("↩️ Using WMATIC route");
+      const poolFee = await findPoolAndFee(
+        quoterContract,
+        tokenAAddress,
+        tokenBAddress,
+        adjAmount,
+        slippageTolerance
+      );
 
-        const poolFee = await findPoolAndFee(
-          quoterContract,
-          tokenAAddress,
-          NATIVETOKENS[swap.chainId].WRAPPED,
-          adjAmount,
-          slippageTolerance
-        );
-        const expectedAmountB: BigNumber =
-          await quoterContract?.callStatic?.quoteExactInputSingle?.(
-            tokenAAddress,
-            NATIVETOKENS[swap.chainId].WRAPPED,
-            poolFee,
-            adjAmount,
-            0
-          );
-
-        const poolFee2 = await findPoolAndFee(
-          quoterContract,
-          NATIVETOKENS[swap.chainId].WRAPPED,
-          tokenBAddress,
-          expectedAmountB as any, // Convert expectedAmountB to BigNumber
-          slippageTolerance
-        );
-
-        let swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60); // 1 hour from now
-
-        const path = ethers.utils.solidityPack(
-          ["address", "uint24", "address", "uint24", "address"],
-          [
-            tokenAAddress,
-            poolFee,
-            NATIVETOKENS[swap.chainId].WRAPPED,
-            poolFee2,
-            tokenBAddress,
-          ]
-        );
-
-        let swapTxInputs = [path, agentAddress, swapDeadline, adjAmount, 0];
-
-        const calldataSwapAgentToRouter =
-          swapRouterContract.interface.encodeFunctionData("exactInput", [
-            swapTxInputs,
-          ]);
-        const swapMultiAgentToRouter = {
-          to: uniRouter,
-          value: 0,
-          data: calldataSwapAgentToRouter,
-        };
-
-        if (swapMultiAgentToRouter)
-          console.log(
-            "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
-          );
-        Calldatas.push(swapMultiAgentToRouter);
-        TokensReturn.push(tokenBAddress);
-      } else {
-        const swapDeadline = Math.floor(Date.now() / 1000 + 60 * 60);
-        const quoterAddress = quoter;
-
-        const quoterContract = new Contract(quoterAddress, quoterAbi, provider);
-        const slippageTolerance = swap.slippage;
-
-        const poolFee = await findPoolAndFee(
-          quoterContract,
-          tokenAAddress,
-          tokenBAddress,
-          adjAmount,
-          slippageTolerance
-        );
-        const expectedAmountB: BigNumber =
-          await quoterContract?.callStatic?.quoteExactInputSingle?.(
-            tokenAAddress,
-            tokenBAddress,
-            poolFee,
-            adjAmount,
-            0
-          );
-
-        const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
-          .mul(10000 - slippageTolerance)
-          .div(10000);
-
-        const swapTxInputs = [
+      const expectedAmountB: BigNumber =
+        await quoterContract?.callStatic?.quoteExactInputSingle?.(
           tokenAAddress,
           tokenBAddress,
           poolFee,
-          agentAddress!,
-          swapDeadline,
           adjAmount,
-          minimumAmountB,
-          0,
-        ];
+          0
+        );
 
-        const calldataSwapAgentToRouter =
-          swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
-            swapTxInputs,
-          ]);
-        const swapAgentToRouter = {
-          to: uniRouter,
-          value: 0,
-          data: calldataSwapAgentToRouter,
-        };
+      const minimumAmountB = ethers.BigNumber.from(expectedAmountB)
+        .mul(10000 - slippageTolerance)
+        .div(10000);
 
-        if (swapAgentToRouter)
-          console.log(
-            "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
-          );
+      const swapTxInputs = [
+        tokenAAddress,
+        tokenBAddress,
+        poolFee,
+        agentAddress!,
+        swapDeadline,
+        adjAmount,
+        minimumAmountB,
+        0,
+      ];
 
-        Calldatas.push(swapAgentToRouter);
-        TokensReturn.push(tokenBAddress);
-      }
+      const calldataSwapAgentToRouter =
+        swapRouterContract.interface.encodeFunctionData("exactInputSingle", [
+          swapTxInputs,
+        ]);
+      const swapAgentToRouter = {
+        to: uniRouter,
+        value: 0,
+        data: calldataSwapAgentToRouter,
+      };
+
+      if (swapAgentToRouter)
+        console.log(
+          "::API::UNISWAP::BUILDSWAP:BATCHED BUILD_AGENT_EXACT_INPUT_TO_UNIROUTER"
+        );
+
+      Calldatas.push(swapAgentToRouter);
+      TokensReturn.push(tokenBAddress);
     }
   }
   console.log("::API::UNISWAP::BUILDSWAP:BATCHED Approvals", Approvals.length);

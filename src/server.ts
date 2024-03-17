@@ -191,6 +191,7 @@ app.get("/:chainId/yearn-v3/vaults", async (req, res) => {
         tokenAddress: vault.token.address,
         tokenName: vault.token.name,
         tokenSymbol: vault.token.symbol,
+
         // Optional: include other properties here if needed
       }))
     );
