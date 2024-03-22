@@ -176,6 +176,12 @@ export async function redeemFromYearnBatched(
       wallet
     );
     const vaultBalance = await vault.balanceOf(receiver);
+    console.log(
+      "::API::YEARN::REDEEM:BATCHED VAULT_BALANCE",
+      Number(vaultBalance)
+    );
+
+    console.log("::API::YEARN::REDEEM:BATCHED AMOUNT", Number(amount));
 
     if (vaultBalance.lt(amount)) {
       throw new Error("::API::YEARN::REDEEM:BATCHED Insufficient balance");
@@ -187,8 +193,14 @@ export async function redeemFromYearnBatched(
       routerAbi,
       wallet
     );
+
     const agentAddress = await InfraRouterContract?.getAgentAddress(receiver);
     const allowanceAgent = await vault?.allowance(receiver, agentAddress);
+    console.log("::API::YEARN::REDEEM:BATCHED AGENT", agentAddress);
+    console.log(
+      "::API::YEARN::REDEEM:BATCHED ALLOWANCE",
+      Number(allowanceAgent)
+    );
 
     // Allowance for Agent
     // -------------------------------------------------------------------------
